@@ -86,7 +86,7 @@ export const MOCK_ENGAGEMENTS: Engagement[] = [
     industry: "Hospitality",
     sector: "F&B",
     loeSigned: true,
-    phase1PaymentReceived: false,
+    phase1PaymentReceived: true,
     finalPaymentReceived: false,
     activationOverride: false,
     stages: [

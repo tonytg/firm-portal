@@ -211,7 +211,8 @@ A suggested walk-through:
    in-progress, and locked stages look and behave, and that progress sits on an approved
    milestone value.
 3. **Open the Intake stage** and work through the questionnaire sections, including the
-   sector-specific set.
+   sector-specific set. To verify completeness, open **Questionnaire Review** (linked on the
+   dashboard) for a read-only list of every approved section and question.
 4. **Open the Risk Identification Workshop** and review the session details and attendance
    confirmation.
 5. **Open Output** to see the controlled-release deliverables list and the locked or
@@ -236,9 +237,10 @@ finalised for the live product:
   engagements so you can explore a realistic, in-progress workflow.
 - **The role switch** (Client / Advisor) is a review aid only. The live product uses secure
   login, and you'll only ever see your own view.
-- **Questionnaire questions.** The section structure follows the approved specification.
-  The full approved question set is being loaded in next so you can verify it in full; see
-  the note your IMPACT contact will share on how to review it.
+- **Questionnaire questions.** The section structure follows the approved specification, and
+  every section and question is listed for verification on the **Questionnaire Review** page
+  (linked from the dashboard). Wording marked *placeholder* is pending final copy; the final
+  wording is being loaded next.
 - **Downloads and file uploads are illustrative.** The release logic and locking are fully
   working, but the actual PDF files and upload storage are connected later.
 - **Actions like Submit, Confirm, and Release** demonstrate the flow and gating; saving your

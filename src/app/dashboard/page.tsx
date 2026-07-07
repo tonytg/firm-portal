@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { PortalHeader } from "@/components/portal-header";
 import { EngagementCard } from "@/components/engagement-card";
 import { MOCK_ENGAGEMENTS } from "@/lib/mock-data";
@@ -30,6 +31,12 @@ export default async function DashboardPage({
               ? "Advisor control view - full engagement visibility, including internal stages."
               : "Your engagements with IMPACT. Progress updates as each stage is completed."}
           </p>
+          <Link
+            href={`/review/questionnaires?role=${role}`}
+            className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-navy underline-offset-2 hover:underline"
+          >
+            Review the full approved questionnaires (read-only)
+          </Link>
         </div>
 
         <div className="space-y-8">
