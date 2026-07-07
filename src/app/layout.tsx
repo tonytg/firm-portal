@@ -13,7 +13,7 @@ const serif = Source_Serif_4({
 });
 
 export const metadata: Metadata = {
-  title: "IMPACT Portal — Risk, Governance & Crisis Advisory",
+  title: "IMPACT Portal - Risk, Governance & Crisis Advisory",
   description:
     "Secure client engagement portal for IMPACT advisory engagements.",
 };

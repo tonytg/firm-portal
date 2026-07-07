@@ -45,7 +45,7 @@ export function ScreenShell({
         {children}
       </main>
       <footer className="border-t bg-surface py-4 text-center text-xs text-muted-foreground">
-        Confidential — IMPACT Advisory. Controlled delivery portal.
+        Confidential - IMPACT Advisory. Controlled delivery portal.
       </footer>
     </div>
   );

@@ -5,6 +5,7 @@ import type { Engagement, Role, Deliverable } from "@/lib/types";
 import {
   canReleaseDeliverable,
   isDeliverableDownloadable,
+  isFinalPaymentDue,
 } from "@/lib/engagement";
 
 /**
@@ -13,14 +14,14 @@ import {
  * LOCKED rules enforced here:
  *  - Executive Brief / Summary is released first.
  *  - Final PDFs unlock only after the validation/walkthrough gate is satisfied.
- *  - Deliverables are PDF only — no editable formats are ever shared.
+ *  - Deliverables are PDF only - no editable formats are ever shared.
  *  - Download eligibility is computed via engagement.ts (server-truth);
  *    the advisor controls the `released` flag.
  */
 const GATE_LABEL: Record<Deliverable["releaseGate"], string> = {
   executive_first: "Released first (via portal)",
   after_validation: "After Validation",
-  after_walkthrough: "After Walkthrough",
+  after_walkthrough: "After Walkthrough & Final Payment",
 };
 
 export function DeliverablesPanel({
@@ -30,15 +31,26 @@ export function DeliverablesPanel({
   engagement: Engagement;
   role: Role;
 }) {
+  const finalPaymentDue = isFinalPaymentDue(engagement);
+
   return (
     <div className="space-y-6">
       <div className="rounded-lg border-l-4 border-l-accent bg-surface-muted p-4 text-sm text-muted-foreground">
         <strong className="text-foreground">Controlled release.</strong> The
         Executive Brief is released first via the portal. The full architecture
-        is explained in a mandatory walkthrough meeting. Final deliverables
-        unlock only afterwards — all in <strong>PDF only</strong>. No editable
-        formats are ever shared.
+        is explained in a mandatory walkthrough / delivery session. Final payment
+        then falls due, and the final deliverables unlock only once it is
+        received, all in <strong>PDF only</strong>. No editable formats are ever
+        shared.
       </div>
+
+      {finalPaymentDue && (
+        <div className="rounded-lg border-l-4 border-l-status-locked bg-status-locked/5 p-4 text-sm">
+          <strong className="text-status-locked">Final payment due.</strong> The
+          walkthrough / delivery session is complete. Final deliverables release
+          as soon as final payment is confirmed.
+        </div>
+      )}
 
       <ul className="space-y-3">
         {engagement.deliverables.map((d) => {
@@ -98,7 +110,7 @@ export function DeliverablesPanel({
 
       <p className="flex items-center gap-2 text-xs text-muted-foreground">
         <CheckCircle2 className="h-4 w-4 text-status-completed" />
-        Download links are gated server-side — a locked deliverable cannot be
+        Download links are gated server-side - a locked deliverable cannot be
         reached even with a direct URL.
       </p>
     </div>

@@ -20,7 +20,7 @@ export interface Question {
   /** Whether supporting evidence upload is expected (Pillar 2 requires evidence). */
   evidenceRequired: boolean;
   sector: SectorTag;
-  /** Placeholder flag — true until the real client question list is provided. */
+  /** Placeholder flag - true until the real client question list is provided. */
   placeholder?: boolean;
 }
 
@@ -38,7 +38,7 @@ function placeholders(
 ): Question[] {
   return Array.from({ length: count }, (_, i) => ({
     id: `${sectionKey}-q${i + 1}`,
-    text: `[Placeholder] ${sectionKey.replace(/-/g, " ")} — question ${i + 1}`,
+    text: `[Placeholder] ${sectionKey.replace(/-/g, " ")} - question ${i + 1}`,
     evidenceRequired: opts.evidenceRequired ?? false,
     sector: "core" as SectorTag,
     placeholder: true,
@@ -46,7 +46,7 @@ function placeholders(
 }
 
 /* ──────────────────────────────────────────────────────────────────────────
- * PILLAR 1 — Intake (8 core modules, + conditional sector questionnaire)
+ * PILLAR 1 - Intake (8 core modules, + conditional sector questionnaire)
  * ────────────────────────────────────────────────────────────────────────── */
 export const PILLAR_1_INTAKE: QuestionnaireSection[] = [
   { key: "business-model", title: "1. Business Model & Value Creation", questions: placeholders("business-model", 3) },
@@ -62,17 +62,17 @@ export const PILLAR_1_INTAKE: QuestionnaireSection[] = [
 /** Conditional sector questionnaires (loaded only when industry matches). */
 export const PILLAR_1_SECTOR: Record<"Hospital" | "F&B", QuestionnaireSection[]> = {
   Hospital: [
-    { key: "hosp-clinical", title: "Healthcare — Clinical Risk & Patient Safety", questions: placeholders("hosp-clinical", 3) },
-    { key: "hosp-compliance", title: "Healthcare — Regulatory Compliance", questions: placeholders("hosp-compliance", 3) },
+    { key: "hosp-clinical", title: "Healthcare - Clinical Risk & Patient Safety", questions: placeholders("hosp-clinical", 3) },
+    { key: "hosp-compliance", title: "Healthcare - Regulatory Compliance", questions: placeholders("hosp-compliance", 3) },
   ],
   "F&B": [
-    { key: "fnb-food-safety", title: "F&B — Food Safety & Hygiene", questions: placeholders("fnb-food-safety", 3) },
-    { key: "fnb-supply", title: "F&B — Supply Chain & Sourcing", questions: placeholders("fnb-supply", 3) },
+    { key: "fnb-food-safety", title: "F&B - Food Safety & Hygiene", questions: placeholders("fnb-food-safety", 3) },
+    { key: "fnb-supply", title: "F&B - Supply Chain & Sourcing", questions: placeholders("fnb-supply", 3) },
   ],
 };
 
 /* ──────────────────────────────────────────────────────────────────────────
- * PILLAR 2 — Governance Diagnostic (12 sections, evidence required)
+ * PILLAR 2 - Governance Diagnostic (12 sections, evidence required)
  * Section list from P2_Diagnostic_Interface_Screen2.
  * ────────────────────────────────────────────────────────────────────────── */
 const P2_SECTION_TITLES: { key: string; title: string }[] = [

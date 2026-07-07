@@ -7,7 +7,7 @@ import { ScreenShell } from "@/components/screen-shell";
 import { AdvisorConsole } from "@/components/advisor-console";
 
 /**
- * Advisor Control Panel route — advisor only. A client reaching this URL is
+ * Advisor Control Panel route - advisor only. A client reaching this URL is
  * blocked server-side.
  */
 export default async function ManagePage({

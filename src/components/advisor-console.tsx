@@ -38,7 +38,13 @@ export function AdvisorConsole({ engagement: initial }: { engagement: Engagement
     }));
   }
 
-  function toggleActivation(field: "loeSigned" | "phase1PaymentReceived" | "activationOverride") {
+  function toggleActivation(
+    field:
+      | "loeSigned"
+      | "phase1PaymentReceived"
+      | "activationOverride"
+      | "finalPaymentReceived",
+  ) {
     setEngagement((e) => ({ ...e, [field]: !e[field] }));
   }
 
@@ -127,6 +133,23 @@ export function AdvisorConsole({ engagement: initial }: { engagement: Engagement
               </div>
             );
           })}
+        </div>
+      </section>
+
+      {/* Commercial hold */}
+      <section className="rounded-lg border bg-surface p-5">
+        <h2 className="font-display text-lg font-semibold">Commercial</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Final deliverables are held until final payment is received (after the
+          walkthrough / delivery session).
+        </p>
+        <div className="mt-4">
+          <Toggle
+            label="Final payment received"
+            on={engagement.finalPaymentReceived}
+            onClick={() => toggleActivation("finalPaymentReceived")}
+            accent
+          />
         </div>
       </section>
 

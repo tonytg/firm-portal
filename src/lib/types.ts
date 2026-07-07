@@ -1,5 +1,5 @@
 /**
- * IMPACT Portal — Domain Model
+ * IMPACT Portal - Domain Model
  *
  * This file encodes the engagement workflow defined in the client
  * specification documents (docs/). The portal is an advisor-controlled
@@ -71,7 +71,7 @@ export interface MeetingSession {
   durationMinutes?: number;
   participants: { name: string; role: string }[];
   agenda: string[];
-  /** Client confirms attendance — but this NEVER completes the stage. */
+  /** Client confirms attendance - but this NEVER completes the stage. */
   attendanceConfirmed: boolean;
   /** Advisor uploads sign-off after the session. */
   signOffUploaded: boolean;
@@ -117,6 +117,8 @@ export interface Engagement {
   phase1PaymentReceived: boolean;
   activationOverride: boolean;
   activatedAt?: string;
+  /** Commercial hold: final PDFs release only after the walkthrough AND final payment. */
+  finalPaymentReceived: boolean;
   stages: StageState[];
   meetings: MeetingSession[];
   deliverables: Deliverable[];

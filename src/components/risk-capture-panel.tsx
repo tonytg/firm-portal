@@ -5,7 +5,7 @@ import { Plus, Trash2, EyeOff } from "lucide-react";
 import type { RiskItem } from "@/lib/types";
 
 /**
- * Pillar 1 Workshop — Risk Capture (Screen 3).
+ * Pillar 1 Workshop - Risk Capture (Screen 3).
  *
  * ADVISOR ONLY. The client cannot see or edit this section. The advisor
  * structures risks during the in-person session using Cause → Event → Impact.

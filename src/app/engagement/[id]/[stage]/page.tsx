@@ -102,7 +102,7 @@ export default async function StagePage({
         <ActivationPanel engagement={engagement} role={role} />
       )}
 
-      {/* Pillar 1 — Intake (industry + core + conditional sector) */}
+      {/* Pillar 1 - Intake (industry + core + conditional sector) */}
       {stage === "intake" && (
         <div className="space-y-6">
           <IndustryHeader
@@ -124,7 +124,7 @@ export default async function StagePage({
         </div>
       )}
 
-      {/* Pillar 2 — Governance Diagnostic */}
+      {/* Pillar 2 - Governance Diagnostic */}
       {stage === "questionnaire" && (
         <div className="space-y-6">
           <IndustryHeader
@@ -143,7 +143,7 @@ export default async function StagePage({
       {def.hasMeeting && meeting && (
         <div className="space-y-6">
           {/* Pillar 1 Risk Identification Workshop extras (Screen 3) */}
-          {engagement.pillar === "pillar_1" && stage === "diagnosis" && (
+          {engagement.pillar === "pillar_1" && stage === "risk_workshop" && (
             <IntakeSummaryExtract />
           )}
 
@@ -166,9 +166,9 @@ export default async function StagePage({
             }
           />
 
-          {/* Advisor-only Risk Capture — never rendered for clients */}
+          {/* Advisor-only Risk Capture - never rendered for clients */}
           {engagement.pillar === "pillar_1" &&
-            stage === "diagnosis" &&
+            stage === "risk_workshop" &&
             role === "advisor" && (
               <RiskCapturePanel initial={engagement.risks ?? []} />
             )}

@@ -8,7 +8,7 @@ import { StatusBar } from "./screen-shell";
 import { formatDate } from "@/lib/utils";
 
 /**
- * Reusable in-person meeting panel — Workshop, Calibration, Validation, Walkthrough.
+ * Reusable in-person meeting panel - Workshop, Calibration, Validation, Walkthrough.
  *
  * Behaviour rules (LOCKED across specs):
  *  - Meetings are conducted in person, outside the portal.
@@ -75,7 +75,7 @@ export function MeetingPanel({
           <ul className="mt-2 space-y-1 text-sm text-muted-foreground">
             {meeting.participants.map((p) => (
               <li key={p.name}>
-                {p.name} — <span className="text-foreground">{p.role}</span>
+                {p.name} - <span className="text-foreground">{p.role}</span>
               </li>
             ))}
           </ul>
@@ -109,7 +109,7 @@ export function MeetingPanel({
         </section>
       )}
 
-      {/* Action area — differs by role */}
+      {/* Action area - differs by role */}
       <section className="flex flex-wrap items-center gap-3 rounded-lg border border-dashed bg-surface p-5">
         {role === "client" ? (
           <button

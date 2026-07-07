@@ -13,7 +13,7 @@ import { StatusBadge } from "./status-badge";
 import { cn } from "@/lib/utils";
 
 /**
- * Screen 1 — Dashboard engagement card.
+ * Screen 1 - Dashboard engagement card.
  * Shared across both pillars; renders the engagement header, progress bar,
  * and the milestone table with status + per-row action, filtered by role.
  */
@@ -118,6 +118,7 @@ export function EngagementCard({
                 <StageAction
                   engagementId={engagement.id}
                   stageKey={def.key}
+                  role={role}
                   accessible={accessible}
                   hasMeeting={def.hasMeeting}
                   status={status}
@@ -134,23 +135,25 @@ export function EngagementCard({
 function StageAction({
   engagementId,
   stageKey,
+  role,
   accessible,
   hasMeeting,
   status,
 }: {
   engagementId: string;
   stageKey: string;
+  role: Role;
   accessible: boolean;
   hasMeeting: boolean;
   status: string;
 }) {
   if (!accessible) {
-    return <span className="w-20 text-right text-sm text-muted-foreground">—</span>;
+    return <span className="w-20 text-right text-sm text-muted-foreground">-</span>;
   }
   const label = hasMeeting && status === "scheduled" ? "Schedule" : "Open";
   return (
     <Link
-      href={`/engagement/${engagementId}/${stageKey}`}
+      href={`/engagement/${engagementId}/${stageKey}?role=${role}`}
       className="w-20 rounded-md border border-navy/15 px-3 py-1.5 text-center text-sm font-medium text-navy transition hover:bg-navy hover:text-white"
     >
       {label}

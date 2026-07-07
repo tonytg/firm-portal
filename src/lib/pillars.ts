@@ -6,7 +6,7 @@
 import type { StageDefinition, Pillar } from "./types";
 
 /**
- * PILLAR 1 — Risk Assessment
+ * PILLAR 1 - Risk Assessment
  * Flow & progress weights from Pillar1_Portal_Wireframes_FINAL (Screen 1).
  * Activation 0% → Intake 20% → Diagnosis 40% → Build 60% → Calibration 80% → Output 100%.
  */
@@ -32,24 +32,33 @@ export const PILLAR_1_STAGES: StageDefinition[] = [
   {
     key: "diagnosis",
     order: 2,
-    title: "Diagnosis",
-    description: "Internal red-flag analysis, then Risk Universe Workshop.",
+    title: "Diagnosis (Internal Analysis)",
+    description: "Internal red-flag analysis of the intake responses.",
     visibility: "status_only", // internal analysis portion is status-only
-    hasMeeting: true,
+    hasMeeting: false,
     progressWeight: 40,
   },
   {
-    key: "build",
+    key: "risk_workshop",
     order: 3,
+    title: "Risk Identification Workshop",
+    description:
+      "Client-facing risk identification session with the advisory team.",
+    visibility: "interactive",
+    hasMeeting: true,
+  },
+  {
+    key: "build",
+    order: 4,
     title: "Build",
-    description: "Risk register / model construction (internal).",
+    description: "Risk register and model construction (internal).",
     visibility: "status_only",
     hasMeeting: false,
     progressWeight: 60,
   },
   {
     key: "calibration",
-    order: 4,
+    order: 5,
     title: "Calibration Session",
     description: "Executive calibration and validation (in person).",
     visibility: "interactive",
@@ -58,16 +67,16 @@ export const PILLAR_1_STAGES: StageDefinition[] = [
   },
   {
     key: "output",
-    order: 5,
+    order: 6,
     title: "Output",
-    description: "Executive Briefing Pack — initial controlled release.",
+    description: "Executive Briefing Pack, the first controlled release.",
     visibility: "interactive",
     hasMeeting: false,
     progressWeight: 100,
   },
   {
     key: "walkthrough",
-    order: 6,
+    order: 7,
     title: "Walkthrough / Delivery",
     description: "Final deliverables walkthrough and controlled release.",
     visibility: "interactive",
@@ -75,16 +84,16 @@ export const PILLAR_1_STAGES: StageDefinition[] = [
   },
   {
     key: "board_delivery",
-    order: 7,
+    order: 8,
     title: "Board Delivery",
-    description: "Optional board presentation / support.",
+    description: "Optional board presentation and support.",
     visibility: "interactive",
     hasMeeting: true,
   },
 ];
 
 /**
- * PILLAR 2 — Governance Framework
+ * PILLAR 2 - Governance Framework
  * Stage flow from P2_Simplified_Developer_Build_Spec (7 stages, 0–6).
  */
 export const PILLAR_2_STAGES: StageDefinition[] = [
@@ -158,6 +167,6 @@ export function getStageDefinition(
 }
 
 export const PILLAR_LABELS: Record<Pillar, string> = {
-  pillar_1: "Pillar 1 — Risk Assessment",
-  pillar_2: "Pillar 2 — Governance Framework",
+  pillar_1: "Pillar 1 - Risk Assessment",
+  pillar_2: "Pillar 2 - Governance Framework",
 };

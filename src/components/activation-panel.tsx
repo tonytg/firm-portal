@@ -38,8 +38,8 @@ export function ActivationPanel({
         <ShieldCheck className="h-5 w-5" />
         <span className="font-medium">
           {active
-            ? "Engagement activated — portal access granted."
-            : "Awaiting activation — no stage is accessible yet."}
+            ? "Engagement activated - portal access granted."
+            : "Awaiting activation - no stage is accessible yet."}
         </span>
       </div>
 
@@ -61,7 +61,7 @@ export function ActivationPanel({
         </ul>
         {engagement.activationOverride && (
           <p className="mt-3 text-xs text-accent">
-            Advisor override applied — activation granted outside standard
+            Advisor override applied - activation granted outside standard
             requirements.
           </p>
         )}

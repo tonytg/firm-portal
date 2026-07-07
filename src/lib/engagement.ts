@@ -1,5 +1,5 @@
 /**
- * Engagement business logic — the "rules" half of the state machine.
+ * Engagement business logic - the "rules" half of the state machine.
  *
  * These functions enforce the LOCKED rules from the specs. They are written
  * to run on the server so the client UI can never bypass a gate by guessing
@@ -32,13 +32,24 @@ export function getProgressPercent(e: Engagement): number {
 
   const weighted = defs.filter((d) => d.progressWeight !== undefined);
   if (weighted.length > 0) {
-    // Pillar 1: highest weight of any completed/active stage.
+    // Pillar 1: walk the approved milestone ladder in order and stop at the
+    // current stage. Progress snaps to the approved values (0/20/40/60/80/100)
+    // and never leapfrogs a later stage that happens to be scheduled early.
     let pct = 0;
     for (const d of weighted) {
       const st = getStageState(e, d.key).status;
-      if (st === "completed") pct = Math.max(pct, d.progressWeight!);
-      else if (st === "in_progress" || st === "scheduled")
-        pct = Math.max(pct, Math.max(0, d.progressWeight! - 10));
+      if (st === "completed") {
+        pct = d.progressWeight!;
+        continue;
+      }
+      if (
+        st === "in_progress" ||
+        st === "under_analysis" ||
+        st === "scheduled"
+      ) {
+        pct = d.progressWeight!;
+      }
+      break;
     }
     return pct;
   }
@@ -82,7 +93,7 @@ export function canClientAccessStage(
 }
 
 /**
- * Release gating — the core "controlled release" discipline.
+ * Release gating - the core "controlled release" discipline.
  *
  * LOCKED rules:
  *  - Executive Brief / Summary releases first.
@@ -107,7 +118,8 @@ export function canReleaseDeliverable(
         e.pillar === "pillar_1"
           ? getStageState(e, "walkthrough").status
           : getStageState(e, "controlled_release").status;
-      return wt === "completed";
+      // Commercial hold: final deliverables also require final payment.
+      return wt === "completed" && e.finalPaymentReceived;
     }
     default:
       return false;
@@ -120,4 +132,16 @@ export function isDeliverableDownloadable(
   d: Deliverable,
 ): boolean {
   return d.released && canReleaseDeliverable(e, d);
+}
+
+/**
+ * Commercial hold indicator: the walkthrough / validation session is complete
+ * but final payment has not been received, so final deliverables stay locked.
+ */
+export function isFinalPaymentDue(e: Engagement): boolean {
+  const wt =
+    e.pillar === "pillar_1"
+      ? getStageState(e, "walkthrough").status
+      : getStageState(e, "controlled_release").status;
+  return wt === "completed" && !e.finalPaymentReceived;
 }
