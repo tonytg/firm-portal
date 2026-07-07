@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Source_Serif_4, Inter } from "next/font/google";
+import { Lora, Inter } from "next/font/google";
 import "./globals.css";
 
 const sans = Inter({
@@ -7,7 +7,8 @@ const sans = Inter({
   subsets: ["latin"],
 });
 
-const serif = Source_Serif_4({
+// Display serif matched to elhachemlaw.com (Lora over Inter).
+const serif = Lora({
   variable: "--font-serif",
   subsets: ["latin"],
 });

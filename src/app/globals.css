@@ -4,23 +4,24 @@
   IMPACT Portal - Design System
   Risk, Governance & Crisis Advisory
   Aesthetic: trustworthy, restrained, "advisory-grade".
-  Deep navy foundation, refined bronze/gold accent, serif display.
+  Matched to elhachemlaw.com: near-black ink, refined gold accent,
+  Lora serif display over Inter sans.
 */
 
 :root {
-  --background: #f7f8fa;
+  --background: #fafafa;
   --surface: #ffffff;
-  --surface-muted: #f1f3f6;
-  --foreground: #131a26;
-  --muted-foreground: #5b6573;
-  --border: #e2e6ec;
+  --surface-muted: #f4f4f5;
+  --foreground: #18181b;
+  --muted-foreground: #71717a;
+  --border: #e4e4e7;
 
-  /* Brand */
-  --navy: #0f1d33;
-  --navy-700: #16294a;
-  --navy-600: #1f3760;
-  --accent: #b08a4f; /* bronze/gold */
-  --accent-soft: #c9a877;
+  /* Brand (matched to elhachemlaw.com: near-black ink + refined gold) */
+  --navy: #18181b; /* primary dark / "ink" */
+  --navy-700: #27272a;
+  --navy-600: #3f3f46;
+  --accent: #b8860b; /* signature gold */
+  --accent-soft: #9a7209; /* deeper gold (hover) */
 
   /* Status palette (maps to the docs' icon system) */
   --status-completed: #1f9d63; /* 🟢 */
