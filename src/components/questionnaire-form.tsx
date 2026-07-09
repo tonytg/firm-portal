@@ -46,10 +46,17 @@ export function QuestionnaireForm({
             key={section.key}
             className="overflow-hidden rounded-lg border bg-surface"
           >
-            <div className="flex items-center justify-between border-b bg-surface-muted px-5 py-3">
-              <h3 className="font-display text-base font-semibold">
-                {section.title}
-              </h3>
+            <div className="flex items-center justify-between gap-3 border-b bg-surface-muted px-5 py-3">
+              <div className="min-w-0">
+                <h3 className="font-display text-base font-semibold">
+                  {section.title}
+                </h3>
+                {role === "advisor" && section.feeds && (
+                  <p className="mt-0.5 text-[11px] text-muted-foreground">
+                    Feeds: {section.feeds}
+                  </p>
+                )}
+              </div>
               <span
                 className={
                   submitted
@@ -65,13 +72,35 @@ export function QuestionnaireForm({
               {section.questions.map((q) => (
                 <div key={q.id}>
                   <label className="block text-sm font-medium">
+                    {q.ref && (
+                      <span className="mr-2 font-mono text-xs text-muted-foreground">
+                        {q.ref}
+                      </span>
+                    )}
                     {q.text}
+                    {q.ifApplicable && (
+                      <span className="ml-2 rounded bg-surface-muted px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                        If applicable
+                      </span>
+                    )}
+                    {q.advisorOnly && role === "advisor" && (
+                      <span className="ml-2 rounded bg-navy/10 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-navy">
+                        Advisor only
+                      </span>
+                    )}
                     {q.placeholder && (
                       <span className="ml-2 rounded bg-accent/10 px-1.5 py-0.5 text-[10px] font-normal uppercase tracking-wide text-accent">
                         placeholder
                       </span>
                     )}
                   </label>
+                  {q.guidance && q.guidance.length > 0 && (
+                    <ul className="mt-1.5 list-disc space-y-0.5 pl-5 text-xs text-muted-foreground">
+                      {q.guidance.map((g, i) => (
+                        <li key={i}>{g}</li>
+                      ))}
+                    </ul>
+                  )}
                   <textarea
                     rows={2}
                     disabled={submitted && role === "client"}
@@ -80,7 +109,7 @@ export function QuestionnaireForm({
                       setAnswers((a) => ({ ...a, [q.id]: e.target.value }))
                     }
                     placeholder="Your response…"
-                    className="mt-1.5 w-full rounded-md border bg-background px-3 py-2 text-sm outline-none focus:border-accent disabled:opacity-60"
+                    className="mt-2 w-full rounded-md border bg-background px-3 py-2 text-sm outline-none focus:border-accent disabled:opacity-60"
                   />
                   {q.evidenceRequired && (
                     <button

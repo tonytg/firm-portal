@@ -67,13 +67,23 @@ export function QuestionnaireReview({ groups }: { groups: ReviewGroup[] }) {
                         className="flex items-start gap-3 px-5 py-3 text-sm"
                       >
                         <span className="mt-0.5 shrink-0 font-mono text-xs text-muted-foreground">
-                          {i + 1}.
+                          {q.ref ?? `${i + 1}.`}
                         </span>
                         <span className="flex-1">
                           {q.text}
-                          <span className="ml-2 inline-flex gap-1 align-middle">
-                            {q.evidenceRequired && (
+                          <span className="ml-2 inline-flex flex-wrap gap-1 align-middle">
+                            {q.ifApplicable && (
+                              <span className="rounded bg-surface-muted px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                                if applicable
+                              </span>
+                            )}
+                            {q.advisorOnly && (
                               <span className="rounded bg-navy/10 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-navy">
+                                advisor only
+                              </span>
+                            )}
+                            {q.evidenceRequired && (
+                              <span className="rounded bg-accent/10 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-accent">
                                 evidence
                               </span>
                             )}

@@ -8,7 +8,7 @@ import {
   isStageVisibleToClient,
 } from "@/lib/engagement";
 import { isActivated } from "@/lib/types";
-import type { Role } from "@/lib/types";
+import type { Role, Engagement } from "@/lib/types";
 import { ScreenShell } from "@/components/screen-shell";
 import { ActivationPanel } from "@/components/activation-panel";
 import { QuestionnaireForm } from "@/components/questionnaire-form";
@@ -18,6 +18,7 @@ import {
   PILLAR_1_INTAKE,
   PILLAR_1_SECTOR,
   PILLAR_2_DIAGNOSTIC,
+  sectionsForRole,
 } from "@/lib/questionnaire";
 import {
   RiskCapturePanel,
@@ -102,9 +103,10 @@ export default async function StagePage({
         <ActivationPanel engagement={engagement} role={role} />
       )}
 
-      {/* Pillar 1 - Intake (industry + core + conditional sector) */}
+      {/* Pillar 1 - Intake (cover + industry + core + conditional sector) */}
       {stage === "intake" && (
         <div className="space-y-6">
+          <IntakeCover engagement={engagement} />
           <IndustryHeader
             industry={engagement.industry}
             sector={engagement.sector}
@@ -112,14 +114,17 @@ export default async function StagePage({
           <QuestionnaireForm
             role={role}
             submitAllLabel="Submit Intake"
-            sections={[
-              ...PILLAR_1_INTAKE,
-              ...(engagement.sector === "Hospital"
-                ? PILLAR_1_SECTOR.Hospital
-                : engagement.sector === "F&B"
-                  ? PILLAR_1_SECTOR["F&B"]
-                  : []),
-            ]}
+            sections={sectionsForRole(
+              [
+                ...PILLAR_1_INTAKE,
+                ...(engagement.sector === "Hospital"
+                  ? PILLAR_1_SECTOR.Hospital
+                  : engagement.sector === "F&B"
+                    ? PILLAR_1_SECTOR["F&B"]
+                    : []),
+              ],
+              role,
+            )}
           />
         </div>
       )}
@@ -134,7 +139,7 @@ export default async function StagePage({
           <QuestionnaireForm
             role={role}
             submitAllLabel="Submit Diagnostic"
-            sections={PILLAR_2_DIAGNOSTIC}
+            sections={sectionsForRole(PILLAR_2_DIAGNOSTIC, role)}
           />
         </div>
       )}
@@ -188,6 +193,43 @@ export default async function StagePage({
         <DeliverablesPanel engagement={engagement} role={role} />
       )}
     </ScreenShell>
+  );
+}
+
+function IntakeCover({ engagement }: { engagement: Engagement }) {
+  const fields: { label: string; value: string; known: boolean }[] = [
+    { label: "Client Entity", value: engagement.clientName, known: true },
+    { label: "Engagement Reference", value: engagement.id, known: true },
+    { label: "Primary Regulatory Authority", value: "To be confirmed", known: false },
+    { label: "Most Recent Gross Revenue (pre-VAT)", value: "To be confirmed", known: false },
+    { label: "Questionnaire Completed By", value: "To be provided", known: false },
+    { label: "Date Submitted", value: "On submission", known: false },
+  ];
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 gap-px overflow-hidden rounded-lg border bg-border sm:grid-cols-3">
+        {fields.map((f) => (
+          <div key={f.label} className="bg-surface px-4 py-3">
+            <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
+              {f.label}
+            </p>
+            <p
+              className={`mt-0.5 text-sm font-medium ${f.known ? "" : "text-muted-foreground"}`}
+            >
+              {f.value}
+            </p>
+          </div>
+        ))}
+      </div>
+      <div className="rounded-lg border-l-4 border-l-accent bg-surface-muted p-4 text-xs text-muted-foreground">
+        <strong className="text-foreground">Instructions.</strong> Answer each
+        question with specific facts, numbers, and dates. Where a question does
+        not apply, write N/A and state why. Where actual practice differs from
+        documented policy, describe the actual practice. Attach supporting
+        documents where referenced. Answer group-wide by default; where a
+        question applies to one entity only, identify that entity.
+      </div>
+    </div>
   );
 }
 

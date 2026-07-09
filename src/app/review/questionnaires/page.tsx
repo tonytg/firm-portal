@@ -7,6 +7,7 @@ import {
   PILLAR_1_INTAKE,
   PILLAR_1_SECTOR,
   PILLAR_2_DIAGNOSTIC,
+  sectionsForRole,
 } from "@/lib/questionnaire";
 import type { Role } from "@/lib/types";
 
@@ -24,18 +25,21 @@ export default async function QuestionnaireReviewPage({
   const role: Role = roleParam === "advisor" ? "advisor" : "client";
 
   const groups: ReviewGroup[] = [
-    { label: "Pillar 1 : Core Intake", sections: PILLAR_1_INTAKE },
+    {
+      label: "Pillar 1 : Core Intake",
+      sections: sectionsForRole(PILLAR_1_INTAKE, role),
+    },
     {
       label: "Pillar 1 : Sector Supplement : Hospital / Healthcare",
-      sections: PILLAR_1_SECTOR.Hospital,
+      sections: sectionsForRole(PILLAR_1_SECTOR.Hospital, role),
     },
     {
       label: "Pillar 1 : Sector Supplement : F&B",
-      sections: PILLAR_1_SECTOR["F&B"],
+      sections: sectionsForRole(PILLAR_1_SECTOR["F&B"], role),
     },
     {
       label: "Pillar 2 : Governance Diagnostic",
-      sections: PILLAR_2_DIAGNOSTIC,
+      sections: sectionsForRole(PILLAR_2_DIAGNOSTIC, role),
     },
   ];
 

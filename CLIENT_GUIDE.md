@@ -237,10 +237,11 @@ finalised for the live product:
   engagements so you can explore a realistic, in-progress workflow.
 - **The role switch** (Client / Advisor) is a review aid only. The live product uses secure
   login, and you'll only ever see your own view.
-- **Questionnaire questions.** The section structure follows the approved specification, and
-  every section and question is listed for verification on the **Questionnaire Review** page
-  (linked from the dashboard). Wording marked *placeholder* is pending final copy; the final
-  wording is being loaded next.
+- **Questionnaire content.** The Pillar 1 questionnaires (Core, plus the F&B and Hospital
+  sector modules) now carry the approved questions in full. You can verify every section and
+  question on the **Questionnaire Review** page (linked from the dashboard). The Pillar 2
+  Governance Diagnostic still uses placeholder wording, marked *placeholder*, pending its final
+  question set.
 - **Downloads and file uploads are illustrative.** The release logic and locking are fully
   working, but the actual PDF files and upload storage are connected later.
 - **Actions like Submit, Confirm, and Release** demonstrate the flow and gating; saving your
