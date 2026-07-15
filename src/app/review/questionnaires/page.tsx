@@ -38,6 +38,10 @@ export default async function QuestionnaireReviewPage({
       sections: sectionsForRole(PILLAR_1_SECTOR["F&B"], role),
     },
     {
+      label: "Pillar 1 : Sector Supplement : Construction (ready to activate)",
+      sections: sectionsForRole(PILLAR_1_SECTOR.Construction, role),
+    },
+    {
       label: "Pillar 2 : Governance Diagnostic",
       sections: sectionsForRole(PILLAR_2_DIAGNOSTIC, role),
     },

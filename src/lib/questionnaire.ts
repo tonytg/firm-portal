@@ -413,8 +413,13 @@ const hq = (ref: string, text: string, guidance: string[]) =>
   q(ref, text, guidance, { sector: "HOSP" });
 const fq = (ref: string, text: string, guidance: string[]) =>
   q(ref, text, guidance, { sector: "F&B" });
+const cq = (ref: string, text: string, evidenceDoc: string) =>
+  q(ref, text, [`Supporting evidence: ${evidenceDoc}`], { sector: "CONST" });
 
-export const PILLAR_1_SECTOR: Record<"Hospital" | "F&B", QuestionnaireSection[]> = {
+export const PILLAR_1_SECTOR: Record<
+  "Hospital" | "F&B" | "Construction",
+  QuestionnaireSection[]
+> = {
   Hospital: [
     {
       key: "hosp-clinical-governance",
@@ -644,7 +649,67 @@ export const PILLAR_1_SECTOR: Record<"Hospital" | "F&B", QuestionnaireSection[]>
       ],
     },
   ],
+  Construction: [
+    {
+      key: "const-project-delivery",
+      title: "C1. Project Delivery & Schedule Discipline",
+      feeds: "Operational, Strategic, Financial Risk",
+      questions: [
+        cq("C1.1", "State the active project portfolio: total number of projects, aggregate contract value, and average project duration. Identify the largest single project as a percentage of total backlog.", "Project register + backlog schedule."),
+        cq("C1.2", "State the schedule performance of the last five completed projects: planned vs actual completion date, days of slippage, and primary cause of delay.", "Project closeout reports."),
+        cq("C1.3", "Confirm whether stage-gate reviews are mandated at defined milestones (tender approval, mobilization, 50% completion, handover) and whether sign-off is documented and retained.", "Stage-gate review records."),
+        cq("C1.4", "State the liquidated damages exposure across the active portfolio: aggregate LD ceiling per active contract and LDs incurred or accrued in the last 24 months.", "Contract register + LD log."),
+        cq("C1.5", "Confirm whether a documented Extension of Time (EOT) and variation order protocol exists, identifying the authority empowered to issue, approve, and certify each.", "EOT and VO procedure document."),
+      ],
+    },
+    {
+      key: "const-cost-bonding",
+      title: "C2. Cost, Financial Exposure & Bonding",
+      feeds: "Financial, Operational, Strategic Risk",
+      questions: [
+        cq("C2.1", "State the cost performance of the last five completed projects: budgeted vs actual cost, % overrun or underrun, and primary driver of variance.", "Project cost reconciliations."),
+        cq("C2.2", "State the aggregate value of bonds and guarantees outstanding (performance, advance payment, retention, parent company) and confirm whether this aggregate is monitored against a Board-approved ceiling.", "Bond schedule + Board minutes."),
+        cq("C2.3", "State the certified-but-unpaid receivables position: total value, ageing profile, and concentration by owner or client. Identify any single owner exceeding 30% of receivables.", "Aged receivables report."),
+        cq("C2.4", "Confirm whether project-level cash flow forecasting is performed at defined cadence and whether it integrates retention balances, certified receivables, and committed subcontractor liabilities.", "Cash flow forecasting protocol."),
+        cq("C2.5", "State whether any active project is currently forecast to complete at a loss, and identify the projected loss against contract value.", "Forecast-at-completion (FAC) report."),
+        cq("C2.6", "State whether any active project is delivered through a joint venture or consortium, and where so, confirm the liability basis (joint and several, or several) and the exposure the business would carry if a partner defaulted or became insolvent mid-project.", "Joint venture or consortium agreement."),
+      ],
+    },
+    {
+      key: "const-subcontractor",
+      title: "C3. Contractor, Subcontractor & Supply Chain Dependency",
+      feeds: "Third-Party & Dependency, Operational, Quality Risk",
+      questions: [
+        cq("C3.1", "Confirm whether a documented prequalification protocol exists for subcontractors and suppliers, covering financial standing, HSE record, prior performance, and sanctions or PEP screening.", "Prequalification procedure + vendor master file."),
+        cq("C3.2", "State the subcontractor concentration profile: identify any single subcontractor accounting for more than 25% of subcontracted value across the active portfolio.", "Subcontract register."),
+        cq("C3.3", "Confirm whether back-to-back contractual provisions (pay-when-paid, liability flow-down, indemnities, LD pass-through) are reviewed and approved by Legal before subcontract execution.", "Subcontract approval workflow."),
+        cq("C3.4", "State the supply chain concentration for critical materials: identify any single material category dependent on a single supplier or single country of origin exceeding 50% of volume.", "Procurement records + material category analysis."),
+        cq("C3.5", "State the history of subcontractor default or replacement events in the last 36 months: number of events, financial impact, and schedule impact.", "Subcontractor default log."),
+      ],
+    },
+    {
+      key: "const-hse-permitting",
+      title: "C4. HSE, Regulatory & Permitting",
+      feeds: "Quality, Legal & Regulatory, Reputational, Crisis & Continuity Risk",
+      questions: [
+        cq("C4.1", "State HSE performance over the last 36 months: TRIR, LTIR, fatalities, and number of major or life-altering incidents across owned and contractor workforce.", "HSE statistics dashboard + incident register."),
+        cq("C4.2", "Confirm whether stop-work authority is documented, extends across the contractor chain, and has been exercised in the last 12 months. State the number of exercises.", "Stop-work authority procedure + exercise log."),
+        cq("C4.3", "State the permit and license inventory across active projects: total permits required, permits in force, permits pending, and any permit that has been delayed, suspended, or revoked in the last 24 months.", "Permit register."),
+        cq("C4.4", "State the environmental compliance position: confirm whether any enforcement notice, fine, or remediation order has been issued in the last 36 months and disclose the financial and operational impact.", "Regulatory correspondence file."),
+        cq("C4.5", "Confirm whether a documented incident escalation protocol exists requiring notification to executive leadership within defined hours of a fatal incident, regulatory notice, or owner termination notice.", "Incident escalation protocol."),
+        cq("C4.6", "State whether any active project is currently subject to a regulatory investigation, owner-issued notice of default, or formal claim exceeding 5% of contract value.", "Regulatory and contractual notices register."),
+      ],
+    },
+  ],
 };
+
+/** Pillar 1 sector supplement for a given engagement sector (empty if none). */
+export function getSectorSections(sector?: string): QuestionnaireSection[] {
+  if (sector && sector in PILLAR_1_SECTOR) {
+    return PILLAR_1_SECTOR[sector as keyof typeof PILLAR_1_SECTOR];
+  }
+  return [];
+}
 
 /* ──────────────────────────────────────────────────────────────────────────
  * PILLAR 2 - Governance Diagnostic (12 sections, evidence required)

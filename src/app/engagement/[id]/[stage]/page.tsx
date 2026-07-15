@@ -16,8 +16,8 @@ import { MeetingPanel } from "@/components/meeting-panel";
 import { DeliverablesPanel } from "@/components/deliverables-panel";
 import {
   PILLAR_1_INTAKE,
-  PILLAR_1_SECTOR,
   PILLAR_2_DIAGNOSTIC,
+  getSectorSections,
   sectionsForRole,
 } from "@/lib/questionnaire";
 import {
@@ -115,27 +115,18 @@ export default async function StagePage({
             role={role}
             submitAllLabel="Submit Intake"
             sections={sectionsForRole(
-              [
-                ...PILLAR_1_INTAKE,
-                ...(engagement.sector === "Hospital"
-                  ? PILLAR_1_SECTOR.Hospital
-                  : engagement.sector === "F&B"
-                    ? PILLAR_1_SECTOR["F&B"]
-                    : []),
-              ],
+              [...PILLAR_1_INTAKE, ...getSectorSections(engagement.sector)],
               role,
             )}
           />
         </div>
       )}
 
-      {/* Pillar 2 - Governance Diagnostic */}
+      {/* Pillar 2 - Governance Diagnostic (core governance sections only;
+          no sector-specific governance module is loaded yet, so no sector label) */}
       {stage === "questionnaire" && (
         <div className="space-y-6">
-          <IndustryHeader
-            industry={engagement.industry}
-            sector={engagement.sector}
-          />
+          <IndustryHeader industry={engagement.industry} />
           <QuestionnaireForm
             role={role}
             submitAllLabel="Submit Diagnostic"

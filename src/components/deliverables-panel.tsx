@@ -1,6 +1,7 @@
 "use client";
 
-import { Download, Lock, FileText, CheckCircle2 } from "lucide-react";
+import { useState } from "react";
+import { Download, Lock, FileText, CheckCircle2, BadgeDollarSign } from "lucide-react";
 import type { Engagement, Role, Deliverable } from "@/lib/types";
 import {
   canReleaseDeliverable,
@@ -31,7 +32,11 @@ export function DeliverablesPanel({
   engagement: Engagement;
   role: Role;
 }) {
-  const finalPaymentDue = isFinalPaymentDue(engagement);
+  // Final payment is advisor-controlled. Demo-local state so the advisor can
+  // confirm it here (on the Output page) and see the final deliverables unlock.
+  const [finalPaid, setFinalPaid] = useState(engagement.finalPaymentReceived);
+  const eng: Engagement = { ...engagement, finalPaymentReceived: finalPaid };
+  const finalPaymentDue = isFinalPaymentDue(eng);
 
   return (
     <div className="space-y-6">
@@ -44,6 +49,33 @@ export function DeliverablesPanel({
         shared.
       </div>
 
+      {/* Advisor: confirm final payment here (mirrors the Advisor Control Panel) */}
+      {role === "advisor" && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-surface p-4">
+          <div className="flex items-start gap-3">
+            <BadgeDollarSign className="mt-0.5 h-5 w-5 text-accent" />
+            <div>
+              <p className="font-medium">Final payment</p>
+              <p className="text-xs text-muted-foreground">
+                Confirm final payment to release the final deliverables (after the
+                walkthrough / delivery session). Also available in the Advisor
+                Control Panel.
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => setFinalPaid((v) => !v)}
+            className={
+              finalPaid
+                ? "rounded-md bg-status-completed px-3 py-1.5 text-sm font-medium text-white"
+                : "rounded-md border border-navy/20 px-3 py-1.5 text-sm font-medium text-navy transition hover:bg-navy hover:text-white"
+            }
+          >
+            {finalPaid ? "Final payment received ✓" : "Mark final payment received"}
+          </button>
+        </div>
+      )}
+
       {finalPaymentDue && (
         <div className="rounded-lg border-l-4 border-l-status-locked bg-status-locked/5 p-4 text-sm">
           <strong className="text-status-locked">Final payment due.</strong> The
@@ -54,8 +86,8 @@ export function DeliverablesPanel({
 
       <ul className="space-y-3">
         {engagement.deliverables.map((d) => {
-          const gateOpen = canReleaseDeliverable(engagement, d);
-          const downloadable = isDeliverableDownloadable(engagement, d);
+          const gateOpen = canReleaseDeliverable(eng, d);
+          const downloadable = isDeliverableDownloadable(eng, d);
 
           return (
             <li

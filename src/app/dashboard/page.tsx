@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { FileText } from "lucide-react";
 import { PortalHeader } from "@/components/portal-header";
 import { EngagementCard } from "@/components/engagement-card";
 import { MOCK_ENGAGEMENTS } from "@/lib/mock-data";
@@ -33,9 +34,10 @@ export default async function DashboardPage({
           </p>
           <Link
             href={`/review/questionnaires?role=${role}`}
-            className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-navy underline-offset-2 hover:underline"
+            className="mt-4 inline-flex items-center gap-2 rounded-md border border-navy/20 bg-surface px-4 py-2 text-sm font-semibold text-navy shadow-sm transition hover:bg-navy hover:text-white"
           >
-            Review the full approved questionnaires (read-only)
+            <FileText className="h-4 w-4" />
+            Questionnaire Review (read-only)
           </Link>
         </div>
 
