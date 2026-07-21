@@ -1,19 +1,14 @@
 /**
- * Questionnaire definitions.
+ * Questionnaire definitions, transcribed from the approved documents.
  *
- * Pillar 1 Core + sector modules (Hospital, F&B) are transcribed from the
- * approved questionnaire documents (docs/p1/*.docx):
- *   - Core:     P1_Questionnaire_Core_20260709_Final
- *   - Hospital: P1_Questionnaire_Module_Hospital_20260709_Final
- *   - F&B:      P1_Questionnaire_Module_FB_20260413_ClaudeFix
- * Construction (P1_Questionnaire_Module_Construction) is not yet wired in.
+ * Pillar 1 (docs/p1/*.docx): Core intake plus sector modules Hospital, F&B, and
+ * Construction. Each question carries its reference code, guidance sub-bullets,
+ * and flags for advisor-only (never shown to the client) and "if applicable".
  *
- * Each question carries its reference code, the guidance sub-bullets from the
- * document, and flags for advisor-only (never shown to the client) and
- * "if applicable" questions.
- *
- * Pillar 2 governance sections remain placeholders (P2_Diagnostic_Interface_Screen2)
- * until that content is provided.
+ * Pillar 2 (docs/P2_GovernanceDiagnosticQuestionnaire_v1.0_Production.docx):
+ * 12 core governance sections plus sector governance modules Hospital, F&B, and
+ * Construction. Clients see the core sections plus only their sector's module,
+ * mirroring Pillar 1.
  */
 
 import type { Role } from "./types";
@@ -41,8 +36,10 @@ export interface Question {
 export interface QuestionnaireSection {
   key: string;
   title: string;
-  /** Which risk categories this section feeds (advisor context). */
+  /** Which risk categories / architecture component this section feeds (advisor context). */
   feeds?: string;
+  /** Supporting documents expected for this section (Pillar 2 evidence). */
+  evidenceNote?: string;
   questions: Question[];
 }
 
@@ -68,21 +65,6 @@ function q(
     ...(opts.advisorOnly ? { advisorOnly: true } : {}),
     ...(opts.ifApplicable ? { ifApplicable: true } : {}),
   };
-}
-
-/** Helper to generate clearly-labelled placeholder questions for a section. */
-function placeholders(
-  sectionKey: string,
-  count: number,
-  opts: { evidenceRequired?: boolean } = {},
-): Question[] {
-  return Array.from({ length: count }, (_, i) => ({
-    id: `${sectionKey}-q${i + 1}`,
-    text: `[Placeholder] ${sectionKey.replace(/-/g, " ")} - question ${i + 1}`,
-    evidenceRequired: opts.evidenceRequired ?? false,
-    sector: "core" as SectorTag,
-    placeholder: true,
-  }));
 }
 
 /** Hide advisor-only questions from the client; empty sections drop out. */
@@ -712,28 +694,236 @@ export function getSectorSections(sector?: string): QuestionnaireSection[] {
 }
 
 /* ──────────────────────────────────────────────────────────────────────────
- * PILLAR 2 - Governance Diagnostic (12 sections, evidence required)
- * Section list from P2_Diagnostic_Interface_Screen2. Questions are placeholders.
+ * PILLAR 2 - Governance ERM Diagnostic
+ * Source: P2_GovernanceDiagnosticQuestionnaire_v1.0_Production
+ * 12 core governance sections plus sector governance modules (Hospital, F&B,
+ * Construction). Every diagnostic question is evidence-backed; each section
+ * carries the required evidence and its architecture component
+ * (RAS / RTM / QLS / KRI / EDP / GOM).
  * ────────────────────────────────────────────────────────────────────────── */
-const P2_SECTION_TITLES: { key: string; title: string }[] = [
-  { key: "governance-structure", title: "Governance Structure" },
-  { key: "risk-appetite", title: "Risk Appetite" },
-  { key: "risk-tolerance", title: "Risk Tolerance" },
-  { key: "quantitative-limits", title: "Quantitative Limits" },
-  { key: "kri-design", title: "KRI Design & Monitoring" },
-  { key: "velocity-override", title: "Velocity & Override" },
-  { key: "escalation-discipline", title: "Escalation Discipline" },
-  { key: "three-lines", title: "Three Lines Accountability" },
-  { key: "board-oversight", title: "Board Oversight" },
-  { key: "regulatory-governance", title: "Regulatory Governance" },
-  { key: "risk-integration", title: "Risk Integration" },
-  { key: "monitoring-reporting", title: "Monitoring & Reporting" },
-];
-
-export const PILLAR_2_DIAGNOSTIC: QuestionnaireSection[] = P2_SECTION_TITLES.map(
-  ({ key, title }) => ({
+function govSection(
+  key: string,
+  title: string,
+  component: string,
+  evidenceNote: string,
+  questions: string[],
+  sector: SectorTag = "core",
+): QuestionnaireSection {
+  return {
     key,
     title,
-    questions: placeholders(key, 2, { evidenceRequired: true }),
-  }),
-);
+    feeds: component,
+    evidenceNote,
+    questions: questions.map((text, i) => ({
+      id: `${key}-${i + 1}`,
+      text,
+      evidenceRequired: true,
+      sector,
+    })),
+  };
+}
+
+export const PILLAR_2_CORE: QuestionnaireSection[] = [
+  govSection("governance-structure", "1. Governance Structure", "GOM",
+    "ERM Policy + Board minutes + version history", [
+    "Does a board-approved ERM Policy exist? (Yes / No)",
+    "Last review date of ERM Policy (DD/MM/YYYY)",
+    "Is version control maintained on ERM Policy? (Yes / No)",
+    "Is risk oversight independent from operational management? (Yes / No)",
+    "Capability level of risk function: None / Informal / Documented / Structured / Integrated",
+  ]),
+  govSection("risk-appetite", "2. Risk Appetite", "RAS",
+    "Approved Appetite Statement + Board approval evidence", [
+    "Does a board-approved Risk Appetite Statement exist? (Yes / No)",
+    "Are measurable appetite boundaries defined per risk category? (Yes / No)",
+    "Does the Appetite Statement address all six impact dimensions: Financial, Operational, Regulatory, Reputational, Quality, Strategic? (Yes / No - state which are missing)",
+    "Is the Appetite Statement reviewed at minimum annually? (Yes / No)",
+    "Last Board ratification date (DD/MM/YYYY)",
+  ]),
+  govSection("risk-tolerance", "3. Risk Tolerance", "RTM",
+    "Tolerance Matrix document", [
+    "Are tolerance thresholds defined with explicit denominator and time base for each risk category? (Yes / No)",
+    "Do thresholds cover all six impact dimensions? (Yes / No - state which are missing)",
+    "Are Moderate and above residual risks subject to defined tolerance boundaries? (Yes / No)",
+    "Are tolerance thresholds formally documented in a Tolerance Matrix? (Yes / No)",
+    "Provide one numeric tolerance example per dimension covered.",
+  ]),
+  govSection("quantitative-limits", "4. Quantitative Limits", "QLS",
+    "Quantitative Risk Limits Schedule + Breach log", [
+    "Are Hard Escalation Thresholds formally documented? (Yes / No)",
+    "Does each limit specify: monitoring owner, escalation authority, response timeline, and system of record? (Yes / No)",
+    "Are breach events logged in a defined system of record? (Yes / No)",
+    "Are limits reviewed and updated when Tolerance Matrix changes? (Yes / No)",
+  ]),
+  govSection("kri-design", "5. KRI Design & Monitoring", "KRI",
+    "KRI Framework document + KRI design cards", [
+    "Are Key Risk Indicators in place for all risks with Residual Score >= 15? (Yes / No - list gaps)",
+    "Are KRIs in place or under review for risks with Residual Score 10-14 AND Velocity = High or Immediate? (Yes / No)",
+    "Does each KRI include: formula, denominator, time base, threshold bands (Green/Amber/Red), monitoring owner, reporting cadence, and tolerance linkage? (Yes / No - state gaps)",
+    "Is KRI content manually designed and validated? (Yes / No - confirm no auto-generated content)",
+    "Reporting cadence of KRIs: (state frequency per KRI)",
+  ]),
+  govSection("velocity-override", "6. Velocity & Override Discipline", "EDP + KRI",
+    "Traceability Log + Risk Register velocity column", [
+    "For risks with Residual Score >= 10 AND Velocity = High or Immediate: is the escalation tier treated as provisional pending senior review before final action? (Yes / No)",
+    "Is advisor confirmation required before a provisional escalation tier is treated as final? (Yes / No)",
+    "Is override confirmation documented in the Traceability Log with date and authority? (Yes / No)",
+    "How many active risks currently have Residual Score >= 10 with Velocity = High or Immediate? (State count)",
+  ]),
+  govSection("escalation-discipline", "7. Escalation Discipline", "EDP",
+    "Escalation & Delegation Protocol + incident log", [
+    "Does a documented Escalation & Delegation Protocol exist? (Yes / No)",
+    "Are response timelines defined in hours or business days for each severity band? (Yes / No)",
+    "Does the Protocol define all three trigger types: Tolerance Breach, Hard Limit Breach, Defined Severity Event? (Yes / No)",
+    "Have escalation failures occurred in the last 12 months? (Yes / No - if yes, describe)",
+    "Is escalation hierarchy precedence documented: Severity Event > Hard Limit > Tolerance Breach? (Yes / No)",
+  ]),
+  govSection("three-lines", "8. Three Lines Accountability", "GOM",
+    "RACI matrix + organizational chart", [
+    "Are First Line, Second Line, and Third Line responsibilities clearly defined and documented? (Yes / No)",
+    "Is a RACI matrix or equivalent available? (Yes / No)",
+    "Does Second Line operate independently from First Line? (Yes / No)",
+    "Does Third Line (Internal Audit / External Auditor) report findings to Board? (Yes / No)",
+  ]),
+  govSection("board-oversight", "9. Board Oversight", "GOM + EDP",
+    "Board agendas + risk dashboard samples", [
+    "Is risk a standing agenda item at every Board meeting? (Yes / No)",
+    "Are risk dashboards or reports reviewed at minimum quarterly? (Yes / No)",
+    "Does the Board receive reporting on all High and Critical risks, Override activations, and Severity Events? (Yes / No)",
+    "Was any High or Critical risk not reported to Board in the last 12 months? (Yes / No - if yes, describe)",
+  ]),
+  govSection("regulatory-governance", "10. Regulatory Governance", "EDP + RAS",
+    "Compliance breach register + corrective action log", [
+    "Are regulatory breaches tracked centrally with assigned owner and deadline? (Yes / No)",
+    "Is there a documented process for managing regulatory correspondence and notifications? (Yes / No)",
+    "Were any regulatory penalties, notices, or sanctions received in the last three years? (Yes / No - if yes, state type and amount)",
+    "Is a named Compliance Officer or equivalent responsible for regulatory monitoring? (Yes / No)",
+  ]),
+  govSection("risk-integration", "11. Risk Integration", "GOM + RAS",
+    "Strategic planning documents + capital approval logs", [
+    "Is risk assessment integrated into budgeting, capital allocation, and strategic planning decisions? (Yes / No)",
+    "Are material risk exposures disclosed in strategic planning documents? (Yes / No)",
+    "Is the Risk Register updated and referenced in investment decision processes? (Yes / No)",
+  ]),
+  govSection("monitoring-reporting", "12. Monitoring & Reporting", "GOM + KRI",
+    "Monthly / quarterly risk reports", [
+    "Are risk reports issued monthly or quarterly? (State frequency)",
+    "Are threshold breaches formally reported to Risk Committee and Board? (Yes / No)",
+    "Is reporting consistent across all ten risk taxonomy categories? (Yes / No - state gaps)",
+    "Does reporting cover all six impact dimensions? (Yes / No)",
+  ]),
+];
+
+export const PILLAR_2_SECTOR: Record<
+  "Hospital" | "F&B" | "Construction",
+  QuestionnaireSection[]
+> = {
+  Hospital: [
+    govSection("p2-hosp-clinical", "Clinical Governance", "RAS + EDP",
+      "Clinical Governance Committee charter + IPC records", [
+      "Does a Clinical Governance Committee exist with defined mandate and Board reporting? (Yes / No)",
+      "Is a Medical Board or Medical Advisory Committee in place? (Yes / No)",
+      "Are clinical incident reports reviewed at governance level? (Yes / No)",
+      "Is a formal IPC program in place with HAI rate monitoring? (Yes / No)",
+      "Are clinical credentialing and privileging formally governed? (Yes / No)",
+    ], "HOSP"),
+    govSection("p2-hosp-accreditation", "Accreditation & Licensing", "RAS + EDP",
+      "MoH license + accreditation certificate + inspection reports", [
+      "Current MoH license status and expiry date",
+      "Current international accreditation status: JCI / ACHS / other (state body and expiry)",
+      "Most recent inspection: date, outcome, open corrective actions",
+      "Whether loss of accreditation would materially affect revenue (Yes / No)",
+    ], "HOSP"),
+    govSection("p2-hosp-emr", "EMR & Clinical IT", "RTM + KRI",
+      "IT system records + BCP test report", [
+      "EMR system and vendor support status",
+      "Downtime procedure existence and last test date",
+      "Maximum acceptable EMR downtime before patient safety is at risk (state in hours)",
+      "Whether EMR holds data subject to health data protection regulation (Yes / No)",
+    ], "HOSP"),
+    govSection("p2-hosp-malpractice", "Malpractice & Insurance", "RAS + QLS",
+      "Legal register + insurance schedule", [
+      "Number of active malpractice or clinical negligence claims",
+      "Total estimated financial exposure across active claims",
+      "Whether professional indemnity or clinical negligence insurance is in place (Yes / No)",
+      "Whether coverage includes all clinical staff including contracted consultants (Yes / No)",
+    ], "HOSP"),
+  ],
+  "F&B": [
+    govSection("p2-fnb-multibranch", "Multi-Branch & Central Kitchen", "RTM + EDP",
+      "Branch register + central kitchen operations log", [
+      "Total number of operational branches: owned vs franchised (state count and %)",
+      "Whether a central kitchen or commissary exists (Yes / No)",
+      "% of menu produced centrally vs branch-level",
+      "Maximum acceptable downtime of central kitchen without revenue impact (state in hours)",
+    ], "F&B"),
+    govSection("p2-fnb-foodsafety", "Food Safety & Regulatory Compliance", "RAS + EDP",
+      "HACCP certificate + inspection records + penalty register", [
+      "HACCP certification status: in place / expired / absent",
+      "Most recent health authority inspection: date, rating, open corrective actions",
+      "Whether any outlet received a closure notice or formal penalty in the last three years (Yes / No)",
+      "Whether allergen labeling complies with applicable jurisdiction requirements (Yes / No)",
+    ], "F&B"),
+    govSection("p2-fnb-supplier", "Supplier & Cold Chain", "RTM + KRI",
+      "Supplier register + procurement records", [
+      "Whether any single ingredient supplier accounts for more than 40% of a critical category (Yes / No - state supplier and %)",
+      "Whether cold chain is owned, contracted, or third-party",
+      "Maximum acceptable delivery delay before product integrity is compromised (state in hours)",
+      "Whether alternative suppliers exist for all critical ingredients (Yes / No)",
+    ], "F&B"),
+  ],
+  Construction: [
+    govSection("p2-const-delivery", "Project Delivery Governance", "GOM + EDP",
+      "DoA matrix + steering committee charter + stage-gate procedure", [
+      "Does a documented Delegation of Authority matrix specify approval thresholds for bid submissions, contract execution, change orders, and variation orders? (Yes / No)",
+      "Are stage-gate reviews mandated at defined milestones (tender approval, mobilization, 50% completion, handover) with documented sign-off? (Yes / No)",
+      "Is a project steering committee mandated for projects above a defined contract value, with documented terms of reference and quorum? (Yes / No)",
+      "Are escalation thresholds (cost overrun %, schedule slip in days, claim value) defined for elevation from project management to Executive Committee and Board? (Yes / No)",
+      "Has any active project breached a defined escalation threshold in the last 12 months without timely escalation? (Yes / No - if yes, describe)",
+    ], "CONST"),
+    govSection("p2-const-cost", "Cost & Financial Exposure", "RAS + QLS",
+      "Bond schedule + Board exposure reporting + project cash flow forecasts + FAC reports", [
+      "Is maximum aggregate exposure (active contract values plus bonds and guarantees outstanding) defined at Board level and monitored? (Yes / No)",
+      "Is the authority to issue parent company guarantees, performance bonds, and advance payment guarantees reserved to the Board above a defined value? (Yes / No)",
+      "Are project-level cash flow forecasts reviewed against certified-but-unpaid amounts, retention balances, and committed subcontractor liabilities at defined cadence? (Yes / No)",
+      "Is any active project currently forecast to complete at a loss? (Yes / No - state count and projected loss)",
+    ], "CONST"),
+    govSection("p2-const-contractor", "Contractor & Subcontractor Dependency", "RTM + GOM",
+      "Prequalification procedure + vendor master file + subcontract approval workflow", [
+      "Does a documented prequalification protocol screen subcontractors and suppliers for financial standing, HSE record, prior performance, and sanctions exposure? (Yes / No)",
+      "Are back-to-back contractual provisions (pay-when-paid, liability flow-down, indemnities, LD pass-through) reviewed and approved by Legal before subcontract execution? (Yes / No)",
+      "Does any single subcontractor account for more than 25% of subcontracted value across the active portfolio? (Yes / No - state subcontractor and %)",
+      "Are defined thresholds documented for issuing default notice, replacement, or termination of a subcontractor during execution? (Yes / No)",
+    ], "CONST"),
+    govSection("p2-const-supplychain", "Supply Chain & Material Concentration", "RTM + KRI",
+      "Procurement records + material category analysis + supply disruption log", [
+      "Does any single material category depend on a single supplier or single country of origin exceeding 50% of volume? (Yes / No - state category and %)",
+      "Are alternative sources prequalified for all critical material categories? (Yes / No)",
+      "Is material price volatility monitored against contract margin exposure? (Yes / No)",
+      "Have material supply disruption events occurred in the last 36 months? (Yes / No - state count and impact)",
+    ], "CONST"),
+    govSection("p2-const-hse", "HSE Governance", "KRI + EDP",
+      "HSE dashboard + incident register + stop-work procedure + escalation test records", [
+      "Are HSE leading and lagging indicators (TRIR, LTIR, near-miss frequency, permit-to-work compliance %) tracked at project and enterprise level? (Yes / No)",
+      "Are defined thresholds documented for Executive and Board notification on HSE indicator breach? (Yes / No)",
+      "Is stop-work authority documented and extending across the contractor chain, with defined post-event review? (Yes / No)",
+      "Number of fatal or life-altering incidents in the last 36 months (state count and outcome of each)",
+      "Has the fatal incident escalation protocol been tested in the last 12 months? (Yes / No)",
+    ], "CONST"),
+    govSection("p2-const-regulatory", "Regulatory & Permitting", "EDP + RAS",
+      "Permit register + regulatory correspondence file + enforcement log", [
+      "Is a permit register maintained covering permits in force, pending, suspended, or revoked across active projects? (Yes / No)",
+      "Has any permit, licence, or environmental clearance been delayed, suspended, or revoked in the last 24 months? (Yes / No - state event and impact)",
+      "Is any active project currently subject to a regulatory investigation, enforcement notice, or remediation order? (Yes / No - state count)",
+      "Has any environmental enforcement notice, fine, or remediation order been issued in the last 36 months? (Yes / No - state financial and operational impact)",
+    ], "CONST"),
+  ],
+};
+
+/** Pillar 2 sector governance module for a given engagement sector (empty if none). */
+export function getP2SectorSections(sector?: string): QuestionnaireSection[] {
+  if (sector && sector in PILLAR_2_SECTOR) {
+    return PILLAR_2_SECTOR[sector as keyof typeof PILLAR_2_SECTOR];
+  }
+  return [];
+}

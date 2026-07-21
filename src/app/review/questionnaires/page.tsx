@@ -6,7 +6,8 @@ import {
 import {
   PILLAR_1_INTAKE,
   PILLAR_1_SECTOR,
-  PILLAR_2_DIAGNOSTIC,
+  PILLAR_2_CORE,
+  PILLAR_2_SECTOR,
   sectionsForRole,
 } from "@/lib/questionnaire";
 import type { Role } from "@/lib/types";
@@ -42,8 +43,20 @@ export default async function QuestionnaireReviewPage({
       sections: sectionsForRole(PILLAR_1_SECTOR.Construction, role),
     },
     {
-      label: "Pillar 2 : Governance Diagnostic",
-      sections: sectionsForRole(PILLAR_2_DIAGNOSTIC, role),
+      label: "Pillar 2 : Core Governance",
+      sections: sectionsForRole(PILLAR_2_CORE, role),
+    },
+    {
+      label: "Pillar 2 : Governance Module : Hospital / Healthcare",
+      sections: sectionsForRole(PILLAR_2_SECTOR.Hospital, role),
+    },
+    {
+      label: "Pillar 2 : Governance Module : F&B",
+      sections: sectionsForRole(PILLAR_2_SECTOR["F&B"], role),
+    },
+    {
+      label: "Pillar 2 : Governance Module : Construction",
+      sections: sectionsForRole(PILLAR_2_SECTOR.Construction, role),
     },
   ];
 

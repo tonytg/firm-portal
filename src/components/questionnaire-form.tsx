@@ -56,6 +56,11 @@ export function QuestionnaireForm({
                     Feeds: {section.feeds}
                   </p>
                 )}
+                {section.evidenceNote && (
+                  <p className="mt-0.5 text-[11px] text-muted-foreground">
+                    Evidence required: {section.evidenceNote}
+                  </p>
+                )}
               </div>
               <span
                 className={
