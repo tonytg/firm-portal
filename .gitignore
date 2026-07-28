@@ -34,6 +34,9 @@ yarn-error.log*
 .env*
 !.env.local.example
 
+# seed output (contains temporary passwords)
+.seed-credentials.txt
+
 # vercel
 .vercel
 
