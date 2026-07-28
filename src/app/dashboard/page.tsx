@@ -1,29 +1,23 @@
 import Link from "next/link";
-import { FileText } from "lucide-react";
 import { PortalHeader } from "@/components/portal-header";
 import { EngagementCard } from "@/components/engagement-card";
-import { MOCK_ENGAGEMENTS } from "@/lib/mock-data";
-import type { Role } from "@/lib/types";
+import { listEngagements } from "@/lib/data";
+import { requireUser } from "@/lib/auth";
 
 /**
  * Screen 1 - Shared Dashboard.
- * One dashboard across both pillars; a client sees all their engagements with
- * shared visibility, while the advisor sees the full internal view.
+ * A client sees their own engagements (RLS-scoped); the advisor/admin sees all.
  */
-export default async function DashboardPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ role?: string }>;
-}) {
-  const { role: roleParam } = await searchParams;
-  const role: Role = roleParam === "advisor" ? "advisor" : "client";
-
-  // Demo: a single client's engagements. Real version filters by auth identity.
-  const engagements = MOCK_ENGAGEMENTS;
+export default async function DashboardPage() {
+  const { profile, uiRole: role } = await requireUser();
+  const engagements = await listEngagements();
 
   return (
     <div className="flex flex-1 flex-col">
-      <PortalHeader role={role} />
+      <PortalHeader
+        role={role}
+        userName={profile.full_name ?? profile.email ?? undefined}
+      />
       <main className="mx-auto w-full max-w-6xl flex-1 px-6 py-8">
         <div className="mb-6">
           <h1 className="font-display text-2xl font-semibold">Dashboard</h1>
@@ -33,18 +27,25 @@ export default async function DashboardPage({
               : "Your engagements with IMPACT. Progress updates as each stage is completed."}
           </p>
           <Link
-            href={`/review/questionnaires?role=${role}`}
-            className="mt-4 inline-flex items-center gap-2 rounded-md border border-navy/20 bg-surface px-4 py-2 text-sm font-semibold text-navy shadow-sm transition hover:bg-navy hover:text-white"
+            href="/review/questionnaires"
+            className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-navy underline-offset-2 hover:underline"
           >
-            <FileText className="h-4 w-4" />
-            Questionnaire Review (read-only)
+            Review the full approved questionnaires (read-only)
           </Link>
         </div>
 
         <div className="space-y-8">
-          {engagements.map((e) => (
-            <EngagementCard key={e.id} engagement={e} role={role} />
-          ))}
+          {engagements.length === 0 ? (
+            <p className="rounded-lg border border-dashed bg-surface p-8 text-center text-sm text-muted-foreground">
+              {role === "advisor"
+                ? "No engagements yet."
+                : "You have no engagements yet. Your advisor will set these up."}
+            </p>
+          ) : (
+            engagements.map((e) => (
+              <EngagementCard key={e.id} engagement={e} role={role} />
+            ))
+          )}
         </div>
       </main>
       <footer className="border-t bg-surface py-4 text-center text-xs text-muted-foreground">

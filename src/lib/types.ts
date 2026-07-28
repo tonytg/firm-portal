@@ -63,6 +63,8 @@ export interface StageState {
 }
 
 export interface MeetingSession {
+  /** Database id (present when loaded from the DB). */
+  id?: string;
   stageKey: string;
   title: string;
   sessionType: "In-person" | "Remote";

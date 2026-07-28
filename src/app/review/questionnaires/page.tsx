@@ -10,20 +10,15 @@ import {
   PILLAR_2_SECTOR,
   sectionsForRole,
 } from "@/lib/questionnaire";
-import type { Role } from "@/lib/types";
+import { requireUser } from "@/lib/auth";
 
 /**
  * Questionnaire Review: a read-only library of every questionnaire section and
  * question in the portal, so the client can verify completeness against the
  * approved specification independent of any engagement's state.
  */
-export default async function QuestionnaireReviewPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ role?: string }>;
-}) {
-  const { role: roleParam } = await searchParams;
-  const role: Role = roleParam === "advisor" ? "advisor" : "client";
+export default async function QuestionnaireReviewPage() {
+  const { profile, uiRole: role } = await requireUser();
 
   const groups: ReviewGroup[] = [
     {
@@ -62,7 +57,10 @@ export default async function QuestionnaireReviewPage({
 
   return (
     <div className="flex flex-1 flex-col">
-      <PortalHeader role={role} />
+      <PortalHeader
+        role={role}
+        userName={profile.full_name ?? profile.email ?? undefined}
+      />
       <main className="mx-auto w-full max-w-4xl flex-1 px-6 py-8">
         <div className="mb-6">
           <p className="text-xs font-medium uppercase tracking-wide text-accent">

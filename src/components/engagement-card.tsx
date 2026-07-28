@@ -63,7 +63,7 @@ export function EngagementCard({
             </span>
             {role === "advisor" && (
               <Link
-                href={`/engagement/${engagement.id}/manage?role=advisor`}
+                href={`/engagement/${engagement.id}/manage`}
                 className="rounded-full bg-navy px-3 py-1 text-xs font-semibold text-white transition hover:bg-navy-700"
               >
                 Manage
@@ -118,7 +118,6 @@ export function EngagementCard({
                 <StageAction
                   engagementId={engagement.id}
                   stageKey={def.key}
-                  role={role}
                   accessible={accessible}
                   hasMeeting={def.hasMeeting}
                   status={status}
@@ -135,14 +134,12 @@ export function EngagementCard({
 function StageAction({
   engagementId,
   stageKey,
-  role,
   accessible,
   hasMeeting,
   status,
 }: {
   engagementId: string;
   stageKey: string;
-  role: Role;
   accessible: boolean;
   hasMeeting: boolean;
   status: string;
@@ -153,7 +150,7 @@ function StageAction({
   const label = hasMeeting && status === "scheduled" ? "Schedule" : "Open";
   return (
     <Link
-      href={`/engagement/${engagementId}/${stageKey}?role=${role}`}
+      href={`/engagement/${engagementId}/${stageKey}`}
       className="w-20 rounded-md border border-navy/15 px-3 py-1.5 text-center text-sm font-medium text-navy transition hover:bg-navy hover:text-white"
     >
       {label}

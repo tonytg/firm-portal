@@ -9,12 +9,14 @@ import { PortalHeader } from "./portal-header";
  */
 export function ScreenShell({
   role,
+  userName,
   eyebrow,
   title,
   subtitle,
   children,
 }: {
   role: Role;
+  userName?: string;
   eyebrow: string;
   title: string;
   subtitle?: string;
@@ -22,10 +24,10 @@ export function ScreenShell({
 }) {
   return (
     <div className="flex flex-1 flex-col">
-      <PortalHeader role={role} />
+      <PortalHeader role={role} userName={userName} />
       <main className="mx-auto w-full max-w-5xl flex-1 px-6 py-8">
         <Link
-          href={`/dashboard?role=${role}`}
+          href="/dashboard"
           className="mb-4 inline-flex items-center gap-1 text-sm text-muted-foreground transition hover:text-foreground"
         >
           <ChevronLeft className="h-4 w-4" />

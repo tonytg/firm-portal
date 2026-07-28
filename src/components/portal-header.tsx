@@ -1,13 +1,18 @@
 import Link from "next/link";
+import { signOut } from "@/app/auth/actions";
 import type { Role } from "@/lib/types";
-import { cn } from "@/lib/utils";
 
 /**
- * Portal shell header. Includes a DEMO role switch (advisor / client) so both
- * perspectives can be reviewed before real authentication is wired in.
- * In production this is replaced by the authenticated user's role.
+ * Portal shell header. Shows the signed-in user and a sign-out control.
+ * (The demo role switch is gone; role now comes from the authenticated session.)
  */
-export function PortalHeader({ role }: { role: Role }) {
+export function PortalHeader({
+  role,
+  userName,
+}: {
+  role: Role;
+  userName?: string;
+}) {
   return (
     <header className="bg-navy text-white">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
@@ -25,35 +30,27 @@ export function PortalHeader({ role }: { role: Role }) {
           </span>
         </Link>
 
-        <div className="flex items-center gap-4">
-          <RoleSwitch current={role} />
+        <div className="flex items-center gap-4 text-sm">
+          {userName && (
+            <span className="hidden items-center gap-2 text-white/70 sm:inline-flex">
+              {userName}
+              {role === "advisor" && (
+                <span className="rounded bg-white/10 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide">
+                  Advisor
+                </span>
+              )}
+            </span>
+          )}
+          <form action={signOut}>
+            <button
+              type="submit"
+              className="rounded-full bg-white/10 px-3 py-1.5 text-xs font-medium text-white/80 transition hover:bg-white/20 hover:text-white"
+            >
+              Sign out
+            </button>
+          </form>
         </div>
       </div>
     </header>
-  );
-}
-
-function RoleSwitch({ current }: { current: Role }) {
-  const roles: { value: Role; label: string }[] = [
-    { value: "client", label: "Client view" },
-    { value: "advisor", label: "Advisor view" },
-  ];
-  return (
-    <div className="flex items-center gap-1 rounded-full bg-white/10 p-1 text-xs">
-      {roles.map((r) => (
-        <Link
-          key={r.value}
-          href={`/dashboard?role=${r.value}`}
-          className={cn(
-            "rounded-full px-3 py-1.5 font-medium transition",
-            current === r.value
-              ? "bg-accent text-navy"
-              : "text-white/70 hover:text-white",
-          )}
-        >
-          {r.label}
-        </Link>
-      ))}
-    </div>
   );
 }

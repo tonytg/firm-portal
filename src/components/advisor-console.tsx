@@ -124,7 +124,7 @@ export function AdvisorConsole({ engagement: initial }: { engagement: Engagement
                     ))}
                   </select>
                   <Link
-                    href={`/engagement/${engagement.id}/${def.key}?role=advisor`}
+                    href={`/engagement/${engagement.id}/${def.key}`}
                     className="inline-flex items-center gap-1 rounded-md border px-2 py-1.5 text-sm text-navy transition hover:bg-surface-muted"
                   >
                     Open <ExternalLink className="h-3.5 w-3.5" />

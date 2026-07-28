@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { Lock, EyeOff } from "lucide-react";
-import { getEngagement } from "@/lib/mock-data";
+import { getEngagementById } from "@/lib/data";
+import { requireUser } from "@/lib/auth";
 import { getStageDefinition, PILLAR_LABELS } from "@/lib/pillars";
 import {
   getStageState,
@@ -28,16 +29,14 @@ import {
 
 export default async function StagePage({
   params,
-  searchParams,
 }: {
   params: Promise<{ id: string; stage: string }>;
-  searchParams: Promise<{ role?: string }>;
 }) {
   const { id, stage } = await params;
-  const { role: roleParam } = await searchParams;
-  const role: Role = roleParam === "advisor" ? "advisor" : "client";
+  const session = await requireUser();
+  const role = session.uiRole;
 
-  const engagement = getEngagement(id);
+  const engagement = await getEngagementById(id);
   if (!engagement) notFound();
 
   const def = getStageDefinition(engagement.pillar, stage);
@@ -98,7 +97,13 @@ export default async function StagePage({
   ) as "not_started" | "in_progress" | "scheduled" | "completed";
 
   return (
-    <ScreenShell role={role} eyebrow={eyebrow} title={def.title} subtitle={def.description}>
+    <ScreenShell
+      role={role}
+      userName={session.profile.full_name ?? session.profile.email ?? undefined}
+      eyebrow={eyebrow}
+      title={def.title}
+      subtitle={def.description}
+    >
       {/* Activation */}
       {stage === "activation" && (
         <ActivationPanel engagement={engagement} role={role} />
