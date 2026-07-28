@@ -1,46 +1,94 @@
 "use client";
 
 import { useState } from "react";
-import { Upload, Lock } from "lucide-react";
+import { Upload, Lock, CheckCircle2 } from "lucide-react";
 import type { QuestionnaireSection } from "@/lib/questionnaire";
 import type { Role } from "@/lib/types";
+import { usePersistentState } from "@/lib/use-demo-store";
+import { formatDate } from "@/lib/utils";
 
 /**
  * Shared questionnaire renderer for Pillar 1 Intake and Pillar 2 Diagnostic.
  *
  * Behaviour from the specs:
- *  - Question block = question text + (evidence required) + input field.
- *  - Buttons: Save · Submit Section · Edit · Submit Diagnostic.
- *  - Advisor may reopen sections (Edit) if needed.
- *  - Advisor-only questions are hidden from the client (handled upstream by
- *    filtering; this component renders whatever sections it is given).
+ *  - Question block = question text + guidance + (evidence) + input field.
+ *  - Save persists the draft; Submit Section locks a section; Submit All records
+ *    the submission and notifies the advisor (stages stay advisor-controlled).
+ *  - Advisor may reopen a submitted section / the whole submission.
  *
- * State is demo-local for now; submissions will call server actions later.
+ * Responses persist to this browser (usePersistentState) during the preview;
+ * authenticated server storage replaces it in the production build.
  */
 type SectionStatus = "draft" | "submitted";
+
+interface FormState {
+  answers: Record<string, string>;
+  statuses: Record<string, SectionStatus>;
+  submittedAt: string | null;
+}
 
 export function QuestionnaireForm({
   sections,
   role,
   submitAllLabel,
+  storageKey,
 }: {
   sections: QuestionnaireSection[];
   role: Role;
   /** "Submit Intake" (P1) or "Submit Diagnostic" (P2). */
   submitAllLabel: string;
+  /** Stable key for demo persistence, e.g. "eng-p2-acme:questionnaire". */
+  storageKey: string;
 }) {
-  const [statuses, setStatuses] = useState<Record<string, SectionStatus>>(
-    Object.fromEntries(sections.map((s) => [s.key, "draft"])),
-  );
-  const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [state, setState] = usePersistentState<FormState>(`qform:${storageKey}`, {
+    answers: {},
+    statuses: Object.fromEntries(sections.map((s) => [s.key, "draft"])),
+    submittedAt: null,
+  });
+  const [savedAt, setSavedAt] = useState<string | null>(null);
 
+  const { answers, statuses, submittedAt } = state;
+  const isSubmitted = submittedAt !== null;
   const allSubmitted = sections.every((s) => statuses[s.key] === "submitted");
+
+  const setAnswer = (id: string, value: string) =>
+    setState((p) => ({ ...p, answers: { ...p.answers, [id]: value } }));
+  const setSectionStatus = (key: string, status: SectionStatus) =>
+    setState((p) => ({ ...p, statuses: { ...p.statuses, [key]: status } }));
+  const save = () => setSavedAt(new Date().toISOString());
+  const submitAll = () =>
+    setState((p) => ({ ...p, submittedAt: new Date().toISOString() }));
+  const reopenSubmission = () =>
+    setState((p) => ({ ...p, submittedAt: null }));
 
   return (
     <div className="space-y-5">
+      {isSubmitted && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border-l-4 border-l-status-completed bg-status-completed/5 p-4 text-sm">
+          <p className="flex items-center gap-2">
+            <CheckCircle2 className="h-4 w-4 text-status-completed" />
+            <span>
+              <strong className="text-foreground">Submitted</strong> on{" "}
+              {formatDate(submittedAt)}. Your responses have been recorded and
+              sent to your advisor for review. The advisor confirms and advances
+              the engagement.
+            </span>
+          </p>
+          {role === "advisor" && (
+            <button
+              type="button"
+              onClick={reopenSubmission}
+              className="rounded-md border px-3 py-1.5 text-sm font-medium transition hover:bg-surface-muted"
+            >
+              Reopen submission
+            </button>
+          )}
+        </div>
+      )}
+
       {sections.map((section) => {
-        const status = statuses[section.key];
-        const submitted = status === "submitted";
+        const submitted = statuses[section.key] === "submitted";
+        const locked = role === "client" && (submitted || isSubmitted);
         return (
           <section
             key={section.key}
@@ -108,18 +156,16 @@ export function QuestionnaireForm({
                   )}
                   <textarea
                     rows={2}
-                    disabled={submitted && role === "client"}
+                    disabled={locked}
                     value={answers[q.id] ?? ""}
-                    onChange={(e) =>
-                      setAnswers((a) => ({ ...a, [q.id]: e.target.value }))
-                    }
+                    onChange={(e) => setAnswer(q.id, e.target.value)}
                     placeholder="Your response…"
                     className="mt-2 w-full rounded-md border bg-background px-3 py-2 text-sm outline-none focus:border-accent disabled:opacity-60"
                   />
                   {q.evidenceRequired && (
                     <button
                       type="button"
-                      disabled={submitted && role === "client"}
+                      disabled={locked}
                       className="mt-2 inline-flex items-center gap-1.5 rounded-md border border-dashed px-3 py-1.5 text-xs text-muted-foreground transition hover:border-accent hover:text-accent disabled:opacity-50"
                     >
                       <Upload className="h-3.5 w-3.5" />
@@ -130,45 +176,37 @@ export function QuestionnaireForm({
               ))}
 
               {/* Section actions */}
-              <div className="flex items-center gap-2 pt-1">
+              <div className="flex flex-wrap items-center gap-2 pt-1">
                 {!submitted ? (
                   <>
                     <button
                       type="button"
+                      onClick={save}
                       className="rounded-md border px-3 py-1.5 text-sm font-medium transition hover:bg-surface-muted"
                     >
                       Save
                     </button>
                     <button
                       type="button"
-                      onClick={() =>
-                        setStatuses((s) => ({
-                          ...s,
-                          [section.key]: "submitted",
-                        }))
-                      }
-                      className="rounded-md bg-navy px-3 py-1.5 text-sm font-medium text-white transition hover:bg-navy-700"
+                      disabled={isSubmitted}
+                      onClick={() => setSectionStatus(section.key, "submitted")}
+                      className="rounded-md bg-navy px-3 py-1.5 text-sm font-medium text-white transition hover:bg-navy-700 disabled:opacity-50"
                     >
                       Submit Section
                     </button>
                   </>
+                ) : role === "advisor" || !isSubmitted ? (
+                  <button
+                    type="button"
+                    onClick={() => setSectionStatus(section.key, "draft")}
+                    className="rounded-md border px-3 py-1.5 text-sm font-medium transition hover:bg-surface-muted"
+                  >
+                    Edit (reopen section)
+                  </button>
                 ) : (
-                  // Edit: clients are locked after submit; advisor may reopen.
-                  (role === "advisor" && (
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setStatuses((s) => ({ ...s, [section.key]: "draft" }))
-                      }
-                      className="rounded-md border px-3 py-1.5 text-sm font-medium transition hover:bg-surface-muted"
-                    >
-                      Edit (reopen section)
-                    </button>
-                  )) || (
-                    <span className="inline-flex items-center gap-1.5 text-sm text-muted-foreground">
-                      <Lock className="h-3.5 w-3.5" /> Locked after submission
-                    </span>
-                  )
+                  <span className="inline-flex items-center gap-1.5 text-sm text-muted-foreground">
+                    <Lock className="h-3.5 w-3.5" /> Locked after submission
+                  </span>
                 )}
               </div>
             </div>
@@ -176,19 +214,29 @@ export function QuestionnaireForm({
         );
       })}
 
-      {/* Submit all */}
-      <div className="flex items-center justify-between rounded-lg border border-dashed bg-surface p-5">
-        <p className="text-sm text-muted-foreground">
-          {allSubmitted
-            ? "All sections submitted. Ready to submit."
-            : "Submit every section before final submission."}
-        </p>
+      {/* Save + Submit all */}
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-dashed bg-surface p-5">
+        <div className="text-sm text-muted-foreground">
+          {isSubmitted ? (
+            <span>This questionnaire has been submitted.</span>
+          ) : allSubmitted ? (
+            <span>All sections submitted. Ready to submit the questionnaire.</span>
+          ) : (
+            <span>Submit every section before final submission.</span>
+          )}
+          <span className="mt-1 block text-xs">
+            {savedAt
+              ? `Draft saved at ${formatDate(savedAt)} (saved in this browser).`
+              : "Responses are saved in this browser during the preview."}
+          </span>
+        </div>
         <button
           type="button"
-          disabled={!allSubmitted}
+          disabled={!allSubmitted || isSubmitted}
+          onClick={submitAll}
           className="rounded-md bg-accent px-4 py-2 text-sm font-medium text-navy transition hover:bg-accent-soft disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {submitAllLabel}
+          {isSubmitted ? "Submitted ✓" : submitAllLabel}
         </button>
       </div>
     </div>
