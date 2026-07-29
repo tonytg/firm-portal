@@ -31,6 +31,14 @@ export function PortalHeader({
         </Link>
 
         <div className="flex items-center gap-4 text-sm">
+          {role === "advisor" && (
+            <Link
+              href="/admin/users"
+              className="rounded-full bg-white/10 px-3 py-1.5 text-xs font-medium text-white/80 transition hover:bg-white/20 hover:text-white"
+            >
+              Admin
+            </Link>
+          )}
           {userName && (
             <span className="hidden items-center gap-2 text-white/70 sm:inline-flex">
               {userName}
