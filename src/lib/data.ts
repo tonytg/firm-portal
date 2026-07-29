@@ -141,3 +141,34 @@ export async function getEngagementById(
   if (error) throw new Error(`getEngagementById: ${error.message}`);
   return data ? mapEngagement(data as unknown as RawEngagement) : undefined;
 }
+
+export interface QuestionnaireState {
+  answers: Record<string, string>;
+  submittedAt: string | null;
+}
+
+/** Saved responses + submission for one engagement stage (RLS-scoped). */
+export async function getQuestionnaireState(
+  engagementId: string,
+  stage: string,
+): Promise<QuestionnaireState> {
+  const supabase = await createServerSupabase();
+  const [responsesRes, submissionRes] = await Promise.all([
+    supabase
+      .from("questionnaire_responses")
+      .select("question_id, answer")
+      .eq("engagement_id", engagementId)
+      .eq("stage", stage),
+    supabase
+      .from("questionnaire_submissions")
+      .select("submitted_at")
+      .eq("engagement_id", engagementId)
+      .eq("stage", stage)
+      .maybeSingle(),
+  ]);
+  const answers: Record<string, string> = {};
+  for (const r of responsesRes.data ?? []) {
+    if (r.answer != null) answers[r.question_id] = r.answer;
+  }
+  return { answers, submittedAt: submissionRes.data?.submitted_at ?? null };
+}

@@ -1,13 +1,13 @@
 "use client";
 
+import { useState, useTransition } from "react";
 import { CheckCircle2, Circle, ShieldCheck } from "lucide-react";
 import type { Engagement, Role } from "@/lib/types";
-import { isActivated } from "@/lib/types";
+import { setEngagementFlag } from "@/app/engagement/actions";
 
 /**
- * Activation screen. The engagement is active only after LoE signature AND
- * Phase 1 payment (advisor may override). No subsequent stage is accessible
- * before activation, and the advisor controls activation and user access.
+ * Activation screen. Active only after LoE signature AND Phase 1 payment
+ * (advisor may override). Advisor controls persist to the database.
  */
 export function ActivationPanel({
   engagement,
@@ -16,14 +16,17 @@ export function ActivationPanel({
   engagement: Engagement;
   role: Role;
 }) {
-  const active = isActivated(engagement);
+  const [loeSigned, setLoe] = useState(engagement.loeSigned);
+  const [phase1, setPhase1] = useState(engagement.phase1PaymentReceived);
+  const [override, setOverride] = useState(engagement.activationOverride);
+  const [pending, startTransition] = useTransition();
+
+  const active = override || (loeSigned && phase1);
+  const run = (fn: () => Promise<void>) => startTransition(() => void fn());
 
   const checks = [
-    { label: "Letter of Engagement (LoE) signed", done: engagement.loeSigned },
-    {
-      label: "Phase 1 payment received",
-      done: engagement.phase1PaymentReceived,
-    },
+    { label: "Letter of Engagement (LoE) signed", done: loeSigned },
+    { label: "Phase 1 payment received", done: phase1 },
   ];
 
   return (
@@ -59,7 +62,7 @@ export function ActivationPanel({
             </li>
           ))}
         </ul>
-        {engagement.activationOverride && (
+        {override && (
           <p className="mt-3 text-xs text-accent">
             Advisor override applied - activation granted outside standard
             requirements.
@@ -69,14 +72,42 @@ export function ActivationPanel({
 
       {role === "advisor" && (
         <section className="flex flex-wrap items-center gap-3 rounded-lg border border-dashed bg-surface p-5">
-          <button className="rounded-md bg-navy px-4 py-2 text-sm font-medium text-white transition hover:bg-navy-700">
-            Mark LoE Signed
+          <button
+            disabled={pending}
+            onClick={() => {
+              const n = !loeSigned;
+              setLoe(n);
+              run(() => setEngagementFlag(engagement.id, "loe_signed", n));
+            }}
+            className="rounded-md bg-navy px-4 py-2 text-sm font-medium text-white transition hover:bg-navy-700 disabled:opacity-50"
+          >
+            {loeSigned ? "LoE Signed ✓" : "Mark LoE Signed"}
           </button>
-          <button className="rounded-md bg-navy px-4 py-2 text-sm font-medium text-white transition hover:bg-navy-700">
-            Mark Phase 1 Paid
+          <button
+            disabled={pending}
+            onClick={() => {
+              const n = !phase1;
+              setPhase1(n);
+              run(() =>
+                setEngagementFlag(engagement.id, "phase1_payment_received", n),
+              );
+            }}
+            className="rounded-md bg-navy px-4 py-2 text-sm font-medium text-white transition hover:bg-navy-700 disabled:opacity-50"
+          >
+            {phase1 ? "Phase 1 Paid ✓" : "Mark Phase 1 Paid"}
           </button>
-          <button className="rounded-md border border-accent px-4 py-2 text-sm font-medium text-accent transition hover:bg-accent hover:text-navy">
-            Override &amp; Activate
+          <button
+            disabled={pending}
+            onClick={() => {
+              const n = !override;
+              setOverride(n);
+              run(() =>
+                setEngagementFlag(engagement.id, "activation_override", n),
+              );
+            }}
+            className="rounded-md border border-accent px-4 py-2 text-sm font-medium text-accent transition hover:bg-accent hover:text-navy disabled:opacity-50"
+          >
+            {override ? "Override On ✓" : "Override & Activate"}
           </button>
           <p className="w-full text-xs text-muted-foreground">
             Advisor controls activation and user permissions.

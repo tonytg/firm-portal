@@ -1,65 +1,82 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { Upload, Lock, CheckCircle2 } from "lucide-react";
 import type { QuestionnaireSection } from "@/lib/questionnaire";
 import type { Role } from "@/lib/types";
-import { usePersistentState } from "@/lib/use-demo-store";
 import { formatDate } from "@/lib/utils";
+import {
+  saveResponses,
+  submitQuestionnaire,
+  reopenSubmission,
+} from "@/app/engagement/actions";
 
 /**
  * Shared questionnaire renderer for Pillar 1 Intake and Pillar 2 Diagnostic.
- *
- * Behaviour from the specs:
- *  - Question block = question text + guidance + (evidence) + input field.
- *  - Save persists the draft; Submit Section locks a section; Submit All records
- *    the submission and notifies the advisor (stages stay advisor-controlled).
- *  - Advisor may reopen a submitted section / the whole submission.
- *
- * Responses persist to this browser (usePersistentState) during the preview;
- * authenticated server storage replaces it in the production build.
+ * Save persists answers; Submit records the submission; both go to the database
+ * through server actions (RLS scopes writes to the user's own engagement).
+ * The advisor may reopen a submission. Stages stay advisor-controlled.
  */
 type SectionStatus = "draft" | "submitted";
-
-interface FormState {
-  answers: Record<string, string>;
-  statuses: Record<string, SectionStatus>;
-  submittedAt: string | null;
-}
 
 export function QuestionnaireForm({
   sections,
   role,
   submitAllLabel,
-  storageKey,
+  engagementId,
+  stage,
+  initialAnswers,
+  initialSubmittedAt,
 }: {
   sections: QuestionnaireSection[];
   role: Role;
-  /** "Submit Intake" (P1) or "Submit Diagnostic" (P2). */
   submitAllLabel: string;
-  /** Stable key for demo persistence, e.g. "eng-p2-acme:questionnaire". */
-  storageKey: string;
+  engagementId: string;
+  stage: string;
+  initialAnswers: Record<string, string>;
+  initialSubmittedAt: string | null;
 }) {
-  const [state, setState] = usePersistentState<FormState>(`qform:${storageKey}`, {
-    answers: {},
-    statuses: Object.fromEntries(sections.map((s) => [s.key, "draft"])),
-    submittedAt: null,
-  });
+  const [answers, setAnswers] = useState<Record<string, string>>(initialAnswers);
+  const [statuses, setStatuses] = useState<Record<string, SectionStatus>>(
+    Object.fromEntries(sections.map((s) => [s.key, "draft"])),
+  );
+  const [submittedAt, setSubmittedAt] = useState<string | null>(initialSubmittedAt);
   const [savedAt, setSavedAt] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [pending, startTransition] = useTransition();
 
-  const { answers, statuses, submittedAt } = state;
   const isSubmitted = submittedAt !== null;
   const allSubmitted = sections.every((s) => statuses[s.key] === "submitted");
 
-  const setAnswer = (id: string, value: string) =>
-    setState((p) => ({ ...p, answers: { ...p.answers, [id]: value } }));
-  const setSectionStatus = (key: string, status: SectionStatus) =>
-    setState((p) => ({ ...p, statuses: { ...p.statuses, [key]: status } }));
-  const save = () => setSavedAt(new Date().toISOString());
+  const run = (fn: () => Promise<void>) => {
+    setError(null);
+    startTransition(async () => {
+      try {
+        await fn();
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Something went wrong.");
+      }
+    });
+  };
+
+  const save = () =>
+    run(async () => {
+      const { savedAt } = await saveResponses(engagementId, stage, answers);
+      setSavedAt(savedAt);
+    });
+
   const submitAll = () =>
-    setState((p) => ({ ...p, submittedAt: new Date().toISOString() }));
-  const reopenSubmission = () =>
-    setState((p) => ({ ...p, submittedAt: null }));
+    run(async () => {
+      await saveResponses(engagementId, stage, answers);
+      const { submittedAt } = await submitQuestionnaire(engagementId, stage);
+      setSubmittedAt(submittedAt);
+    });
+
+  const reopen = () =>
+    run(async () => {
+      await reopenSubmission(engagementId, stage);
+      setSubmittedAt(null);
+    });
 
   return (
     <div className="space-y-5">
@@ -70,15 +87,15 @@ export function QuestionnaireForm({
             <span>
               <strong className="text-foreground">Submitted</strong> on{" "}
               {formatDate(submittedAt)}. Your responses have been recorded and
-              sent to your advisor for review. The advisor confirms and advances
-              the engagement.
+              sent to your advisor for review.
             </span>
           </p>
           {role === "advisor" && (
             <button
               type="button"
-              onClick={reopenSubmission}
-              className="rounded-md border px-3 py-1.5 text-sm font-medium transition hover:bg-surface-muted"
+              onClick={reopen}
+              disabled={pending}
+              className="rounded-md border px-3 py-1.5 text-sm font-medium transition hover:bg-surface-muted disabled:opacity-50"
             >
               Reopen submission
             </button>
@@ -158,7 +175,9 @@ export function QuestionnaireForm({
                     rows={2}
                     disabled={locked}
                     value={answers[q.id] ?? ""}
-                    onChange={(e) => setAnswer(q.id, e.target.value)}
+                    onChange={(e) =>
+                      setAnswers((a) => ({ ...a, [q.id]: e.target.value }))
+                    }
                     placeholder="Your response…"
                     className="mt-2 w-full rounded-md border bg-background px-3 py-2 text-sm outline-none focus:border-accent disabled:opacity-60"
                   />
@@ -175,21 +194,23 @@ export function QuestionnaireForm({
                 </div>
               ))}
 
-              {/* Section actions */}
               <div className="flex flex-wrap items-center gap-2 pt-1">
                 {!submitted ? (
                   <>
                     <button
                       type="button"
                       onClick={save}
-                      className="rounded-md border px-3 py-1.5 text-sm font-medium transition hover:bg-surface-muted"
+                      disabled={pending || (role === "client" && isSubmitted)}
+                      className="rounded-md border px-3 py-1.5 text-sm font-medium transition hover:bg-surface-muted disabled:opacity-50"
                     >
-                      Save
+                      {pending ? "Saving…" : "Save"}
                     </button>
                     <button
                       type="button"
                       disabled={isSubmitted}
-                      onClick={() => setSectionStatus(section.key, "submitted")}
+                      onClick={() =>
+                        setStatuses((s) => ({ ...s, [section.key]: "submitted" }))
+                      }
                       className="rounded-md bg-navy px-3 py-1.5 text-sm font-medium text-white transition hover:bg-navy-700 disabled:opacity-50"
                     >
                       Submit Section
@@ -198,7 +219,9 @@ export function QuestionnaireForm({
                 ) : role === "advisor" || !isSubmitted ? (
                   <button
                     type="button"
-                    onClick={() => setSectionStatus(section.key, "draft")}
+                    onClick={() =>
+                      setStatuses((s) => ({ ...s, [section.key]: "draft" }))
+                    }
                     className="rounded-md border px-3 py-1.5 text-sm font-medium transition hover:bg-surface-muted"
                   >
                     Edit (reopen section)
@@ -214,7 +237,12 @@ export function QuestionnaireForm({
         );
       })}
 
-      {/* Save + Submit all */}
+      {error && (
+        <p className="rounded-md bg-status-locked/10 px-3 py-2 text-sm text-status-locked">
+          {error}
+        </p>
+      )}
+
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-dashed bg-surface p-5">
         <div className="text-sm text-muted-foreground">
           {isSubmitted ? (
@@ -224,19 +252,19 @@ export function QuestionnaireForm({
           ) : (
             <span>Submit every section before final submission.</span>
           )}
-          <span className="mt-1 block text-xs">
-            {savedAt
-              ? `Draft saved at ${formatDate(savedAt)} (saved in this browser).`
-              : "Responses are saved in this browser during the preview."}
-          </span>
+          {savedAt && (
+            <span className="mt-1 block text-xs">
+              Draft saved at {formatDate(savedAt)}.
+            </span>
+          )}
         </div>
         <button
           type="button"
-          disabled={!allSubmitted || isSubmitted}
+          disabled={!allSubmitted || isSubmitted || pending}
           onClick={submitAll}
           className="rounded-md bg-accent px-4 py-2 text-sm font-medium text-navy transition hover:bg-accent-soft disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {isSubmitted ? "Submitted ✓" : submitAllLabel}
+          {isSubmitted ? "Submitted ✓" : pending ? "Working…" : submitAllLabel}
         </button>
       </div>
     </div>

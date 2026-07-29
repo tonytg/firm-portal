@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import Link from "next/link";
 import { ExternalLink } from "lucide-react";
 import type { Engagement, StageStatus } from "@/lib/types";
@@ -8,13 +8,17 @@ import { isActivated } from "@/lib/types";
 import { getStageDefinitions } from "@/lib/pillars";
 import { canReleaseDeliverable } from "@/lib/engagement";
 import { StatusBadge } from "./status-badge";
+import {
+  setEngagementFlag,
+  setStageStatus,
+  setDeliverableReleased,
+  type EngagementFlag,
+} from "@/app/engagement/actions";
 
 /**
- * Dedicated Advisor Control Panel for one engagement.
- *
- * Consolidates the advisor's manual controls in one surface, reflecting the
- * LOCKED workflow: stages do not auto-advance, the advisor marks completion,
- * and releases are gated. Actions are demo-local until server actions land.
+ * Advisor Control Panel for one engagement. Every control persists to the
+ * database via server actions (admin-only, enforced by RLS). Local state is
+ * updated optimistically for immediate feedback.
  */
 const STATUS_OPTIONS: StageStatus[] = [
   "not_started",
@@ -26,40 +30,44 @@ const STATUS_OPTIONS: StageStatus[] = [
 
 export function AdvisorConsole({ engagement: initial }: { engagement: Engagement }) {
   const [engagement, setEngagement] = useState<Engagement>(initial);
+  const [pending, startTransition] = useTransition();
   const defs = getStageDefinitions(engagement.pillar);
   const active = isActivated(engagement);
 
-  function setStageStatus(key: string, status: StageStatus) {
+  const run = (fn: () => Promise<void>) => startTransition(() => void fn());
+
+  function toggleFlag(
+    uiField: "loeSigned" | "phase1PaymentReceived" | "finalPaymentReceived" | "activationOverride",
+    dbField: EngagementFlag,
+  ) {
+    const next = !engagement[uiField];
+    setEngagement((e) => ({ ...e, [uiField]: next }));
+    run(() => setEngagementFlag(engagement.id, dbField, next));
+  }
+
+  function changeStage(key: string, status: StageStatus) {
     setEngagement((e) => ({
       ...e,
       stages: e.stages.some((s) => s.key === key)
         ? e.stages.map((s) => (s.key === key ? { ...s, status } : s))
         : [...e.stages, { key, status }],
     }));
+    run(() => setStageStatus(engagement.id, key, status));
   }
 
-  function toggleActivation(
-    field:
-      | "loeSigned"
-      | "phase1PaymentReceived"
-      | "activationOverride"
-      | "finalPaymentReceived",
-  ) {
-    setEngagement((e) => ({ ...e, [field]: !e[field] }));
-  }
-
-  function toggleRelease(id: string) {
+  function toggleRelease(id: string, current: boolean) {
+    const next = !current;
     setEngagement((e) => ({
       ...e,
       deliverables: e.deliverables.map((d) =>
-        d.id === id ? { ...d, released: !d.released } : d,
+        d.id === id ? { ...d, released: next } : d,
       ),
     }));
+    run(() => setDeliverableReleased(id, next, engagement.id));
   }
 
   return (
     <div className="space-y-8">
-      {/* Activation */}
       <section className="rounded-lg border bg-surface p-5">
         <div className="flex items-center justify-between">
           <h2 className="font-display text-lg font-semibold">Activation</h2>
@@ -74,13 +82,12 @@ export function AdvisorConsole({ engagement: initial }: { engagement: Engagement
           </span>
         </div>
         <div className="mt-4 flex flex-wrap gap-3">
-          <Toggle label="LoE signed" on={engagement.loeSigned} onClick={() => toggleActivation("loeSigned")} />
-          <Toggle label="Phase 1 paid" on={engagement.phase1PaymentReceived} onClick={() => toggleActivation("phase1PaymentReceived")} />
-          <Toggle label="Override activation" on={engagement.activationOverride} onClick={() => toggleActivation("activationOverride")} accent />
+          <Toggle label="LoE signed" on={engagement.loeSigned} disabled={pending} onClick={() => toggleFlag("loeSigned", "loe_signed")} />
+          <Toggle label="Phase 1 paid" on={engagement.phase1PaymentReceived} disabled={pending} onClick={() => toggleFlag("phase1PaymentReceived", "phase1_payment_received")} />
+          <Toggle label="Override activation" on={engagement.activationOverride} disabled={pending} onClick={() => toggleFlag("activationOverride", "activation_override")} accent />
         </div>
       </section>
 
-      {/* Stage control */}
       <section className="rounded-lg border bg-surface p-5">
         <h2 className="font-display text-lg font-semibold">Stage Control</h2>
         <p className="mt-1 text-sm text-muted-foreground">
@@ -112,10 +119,11 @@ export function AdvisorConsole({ engagement: initial }: { engagement: Engagement
                   <StatusBadge status={current} />
                   <select
                     value={current}
+                    disabled={pending}
                     onChange={(e) =>
-                      setStageStatus(def.key, e.target.value as StageStatus)
+                      changeStage(def.key, e.target.value as StageStatus)
                     }
-                    className="rounded-md border bg-background px-2 py-1.5 text-sm outline-none focus:border-accent"
+                    className="rounded-md border bg-background px-2 py-1.5 text-sm outline-none focus:border-accent disabled:opacity-60"
                   >
                     {STATUS_OPTIONS.map((s) => (
                       <option key={s} value={s}>
@@ -136,7 +144,6 @@ export function AdvisorConsole({ engagement: initial }: { engagement: Engagement
         </div>
       </section>
 
-      {/* Commercial hold */}
       <section className="rounded-lg border bg-surface p-5">
         <h2 className="font-display text-lg font-semibold">Commercial</h2>
         <p className="mt-1 text-sm text-muted-foreground">
@@ -147,13 +154,13 @@ export function AdvisorConsole({ engagement: initial }: { engagement: Engagement
           <Toggle
             label="Final payment received"
             on={engagement.finalPaymentReceived}
-            onClick={() => toggleActivation("finalPaymentReceived")}
+            disabled={pending}
+            onClick={() => toggleFlag("finalPaymentReceived", "final_payment_received")}
             accent
           />
         </div>
       </section>
 
-      {/* Deliverable releases */}
       <section className="rounded-lg border bg-surface p-5">
         <h2 className="font-display text-lg font-semibold">Deliverable Releases</h2>
         <p className="mt-1 text-sm text-muted-foreground">
@@ -176,8 +183,8 @@ export function AdvisorConsole({ engagement: initial }: { engagement: Engagement
                   </p>
                 </div>
                 <button
-                  disabled={!gateOpen}
-                  onClick={() => toggleRelease(d.id)}
+                  disabled={!gateOpen || pending}
+                  onClick={() => toggleRelease(d.id, d.released)}
                   className="rounded-md border border-navy/20 px-3 py-1.5 text-sm font-medium text-navy transition hover:bg-navy hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   {d.released ? "Released ✓ (unrelease)" : "Release"}
@@ -196,21 +203,25 @@ function Toggle({
   on,
   onClick,
   accent,
+  disabled,
 }: {
   label: string;
   on: boolean;
   onClick: () => void;
   accent?: boolean;
+  disabled?: boolean;
 }) {
   return (
     <button
       onClick={onClick}
+      disabled={disabled}
       className={
-        on
+        (on
           ? accent
             ? "rounded-md bg-accent px-4 py-2 text-sm font-medium text-navy"
             : "rounded-md bg-status-completed px-4 py-2 text-sm font-medium text-white"
-          : "rounded-md border px-4 py-2 text-sm font-medium text-muted-foreground transition hover:bg-surface-muted"
+          : "rounded-md border px-4 py-2 text-sm font-medium text-muted-foreground transition hover:bg-surface-muted") +
+        " disabled:opacity-50"
       }
     >
       {on ? "✓ " : ""}

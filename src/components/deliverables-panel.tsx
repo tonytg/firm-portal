@@ -1,23 +1,21 @@
 "use client";
 
-import { useState } from "react";
-import { Download, Lock, FileText, CheckCircle2, BadgeDollarSign } from "lucide-react";
+import { useState, useTransition } from "react";
+import { Download, Lock, FileText, CheckCircle2 } from "lucide-react";
 import type { Engagement, Role, Deliverable } from "@/lib/types";
 import {
   canReleaseDeliverable,
   isDeliverableDownloadable,
   isFinalPaymentDue,
 } from "@/lib/engagement";
+import { setDeliverableReleased } from "@/app/engagement/actions";
 
 /**
- * Controlled Release / Output screen (Pillar 1 Output, Pillar 2 Screen 5).
- *
- * LOCKED rules enforced here:
- *  - Executive Brief / Summary is released first.
- *  - Final PDFs unlock only after the validation/walkthrough gate is satisfied.
- *  - Deliverables are PDF only - no editable formats are ever shared.
- *  - Download eligibility is computed via engagement.ts (server-truth);
- *    the advisor controls the `released` flag.
+ * Controlled Release / Output screen. Locked rules:
+ *  - Executive Brief releases first; final PDFs unlock after the
+ *    walkthrough/validation gate AND final payment; PDF only.
+ *  - Release eligibility is computed from engagement state; the advisor toggles
+ *    the released flag, which persists to the database.
  */
 const GATE_LABEL: Record<Deliverable["releaseGate"], string> = {
   executive_first: "Released first (via portal)",
@@ -32,11 +30,20 @@ export function DeliverablesPanel({
   engagement: Engagement;
   role: Role;
 }) {
-  // Final payment is advisor-controlled. Demo-local state so the advisor can
-  // confirm it here (on the Output page) and see the final deliverables unlock.
-  const [finalPaid, setFinalPaid] = useState(engagement.finalPaymentReceived);
-  const eng: Engagement = { ...engagement, finalPaymentReceived: finalPaid };
+  const [deliverables, setDeliverables] = useState(engagement.deliverables);
+  const [pending, startTransition] = useTransition();
+  const eng: Engagement = { ...engagement, deliverables };
   const finalPaymentDue = isFinalPaymentDue(eng);
+
+  function toggleRelease(id: string, current: boolean) {
+    const next = !current;
+    setDeliverables((list) =>
+      list.map((d) => (d.id === id ? { ...d, released: next } : d)),
+    );
+    startTransition(() =>
+      void setDeliverableReleased(id, next, engagement.id),
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -49,33 +56,6 @@ export function DeliverablesPanel({
         shared.
       </div>
 
-      {/* Advisor: confirm final payment here (mirrors the Advisor Control Panel) */}
-      {role === "advisor" && (
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-surface p-4">
-          <div className="flex items-start gap-3">
-            <BadgeDollarSign className="mt-0.5 h-5 w-5 text-accent" />
-            <div>
-              <p className="font-medium">Final payment</p>
-              <p className="text-xs text-muted-foreground">
-                Confirm final payment to release the final deliverables (after the
-                walkthrough / delivery session). Also available in the Advisor
-                Control Panel.
-              </p>
-            </div>
-          </div>
-          <button
-            onClick={() => setFinalPaid((v) => !v)}
-            className={
-              finalPaid
-                ? "rounded-md bg-status-completed px-3 py-1.5 text-sm font-medium text-white"
-                : "rounded-md border border-navy/20 px-3 py-1.5 text-sm font-medium text-navy transition hover:bg-navy hover:text-white"
-            }
-          >
-            {finalPaid ? "Final payment received ✓" : "Mark final payment received"}
-          </button>
-        </div>
-      )}
-
       {finalPaymentDue && (
         <div className="rounded-lg border-l-4 border-l-status-locked bg-status-locked/5 p-4 text-sm">
           <strong className="text-status-locked">Final payment due.</strong> The
@@ -85,7 +65,7 @@ export function DeliverablesPanel({
       )}
 
       <ul className="space-y-3">
-        {engagement.deliverables.map((d) => {
+        {deliverables.map((d) => {
           const gateOpen = canReleaseDeliverable(eng, d);
           const downloadable = isDeliverableDownloadable(eng, d);
 
@@ -105,14 +85,14 @@ export function DeliverablesPanel({
               </div>
 
               <div className="flex items-center gap-2">
-                {/* Advisor controls release; release only permitted when gate open */}
                 {role === "advisor" && (
                   <button
-                    disabled={!gateOpen}
+                    disabled={!gateOpen || pending}
+                    onClick={() => toggleRelease(d.id, d.released)}
                     title={
                       gateOpen
                         ? "Release this deliverable to the client"
-                        : "Gate not satisfied yet (complete the required meeting first)"
+                        : "Gate not satisfied yet (complete the required meeting / final payment first)"
                     }
                     className="rounded-md border border-navy/20 px-3 py-1.5 text-sm font-medium text-navy transition hover:bg-navy hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
                   >

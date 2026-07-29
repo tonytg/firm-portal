@@ -1,31 +1,23 @@
 "use client";
 
+import { useState, useTransition } from "react";
 import { CalendarClock, MapPin, Users, FileSignature } from "lucide-react";
 import type { MeetingSession, Role } from "@/lib/types";
 import { StatusBadge } from "./status-badge";
 import { StatusBar } from "./screen-shell";
-import { usePersistentState } from "@/lib/use-demo-store";
 import { formatDate } from "@/lib/utils";
+import {
+  setMeetingSchedule,
+  confirmAttendance,
+  setSignOff,
+} from "@/app/engagement/actions";
 
 /**
- * Reusable in-person meeting panel - Workshop, Calibration, Validation, Walkthrough.
- *
- * Behaviour rules (LOCKED across specs):
- *  - Meetings are conducted in person, outside the portal.
- *  - The advisor schedules the session (date and time picker below).
- *  - The client may confirm attendance, but this NEVER completes the stage.
- *  - The advisor marks completion and uploads sign-off after the session.
- *
- * Scheduling / attendance / sign-off persist to this browser during the preview;
- * server scheduling and calendar invites arrive with the backend.
+ * In-person meeting panel. The advisor schedules the session (date/time picker)
+ * and uploads sign-off; the client confirms attendance (never completes the
+ * stage). All three persist via server actions (RLS: schedule/sign-off are
+ * admin-only; attendance goes through the confirm_attendance RPC).
  */
-interface MeetingState {
-  scheduledAt: string | null;
-  attendanceConfirmed: boolean;
-  signOffUploaded: boolean;
-}
-
-/** ISO (or datetime-local) string -> value for <input type="datetime-local">. */
 function toInputValue(v: string | null): string {
   if (!v) return "";
   const d = new Date(v);
@@ -38,27 +30,39 @@ export function MeetingPanel({
   meeting,
   role,
   stageStatus,
-  storageKey,
+  engagementId,
+  stage,
   preRead,
 }: {
   meeting: MeetingSession;
   role: Role;
   stageStatus: "not_started" | "in_progress" | "scheduled" | "completed";
-  /** Stable key for demo persistence, e.g. "eng-p1-acme:risk_workshop". */
-  storageKey: string;
-  /** Optional read-only pre-read block (Validation / pre-read stages). */
+  engagementId: string;
+  stage: string;
   preRead?: { title: string; items: string[] };
 }) {
-  const [state, setState] = usePersistentState<MeetingState>(
-    `meeting:${storageKey}`,
-    {
-      scheduledAt: meeting.scheduledAt ?? null,
-      attendanceConfirmed: meeting.attendanceConfirmed,
-      signOffUploaded: meeting.signOffUploaded,
-    },
+  const [scheduledAt, setScheduledAt] = useState<string | null>(
+    meeting.scheduledAt ?? null,
   );
-  const { scheduledAt, attendanceConfirmed, signOffUploaded } = state;
+  const [attendanceConfirmed, setAttendanceConfirmed] = useState(
+    meeting.attendanceConfirmed,
+  );
+  const [signOffUploaded, setSignOffUploaded] = useState(meeting.signOffUploaded);
+  const [error, setError] = useState<string | null>(null);
+  const [pending, startTransition] = useTransition();
+  const meetingId = meeting.id ?? "";
   const isScheduled = Boolean(scheduledAt);
+
+  const run = (fn: () => Promise<void>) => {
+    setError(null);
+    startTransition(async () => {
+      try {
+        await fn();
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Something went wrong.");
+      }
+    });
+  };
 
   return (
     <div className="space-y-6">
@@ -74,7 +78,6 @@ export function MeetingPanel({
         ]}
       />
 
-      {/* Scheduling - advisor picks a date and time; client sees it read-only */}
       <section className="rounded-lg border bg-surface p-5">
         <h3 className="flex items-center gap-2 font-display text-base font-semibold">
           <CalendarClock className="h-4 w-4" /> Schedule Session
@@ -87,27 +90,20 @@ export function MeetingPanel({
               </span>
               <input
                 type="datetime-local"
-                value={toInputValue(scheduledAt)}
-                onChange={(e) =>
-                  setState((p) => ({
-                    ...p,
-                    scheduledAt: e.target.value
-                      ? new Date(e.target.value).toISOString()
-                      : null,
-                  }))
-                }
-                className="rounded-md border bg-background px-3 py-2 text-sm outline-none focus:border-accent"
+                defaultValue={toInputValue(scheduledAt)}
+                disabled={pending}
+                onChange={(e) => {
+                  const iso = e.target.value
+                    ? new Date(e.target.value).toISOString()
+                    : null;
+                  setScheduledAt(iso);
+                  run(() =>
+                    setMeetingSchedule(meetingId, iso, engagementId, stage),
+                  );
+                }}
+                className="rounded-md border bg-background px-3 py-2 text-sm outline-none focus:border-accent disabled:opacity-60"
               />
             </label>
-            {isScheduled && (
-              <button
-                type="button"
-                onClick={() => setState((p) => ({ ...p, scheduledAt: null }))}
-                className="rounded-md border px-3 py-2 text-sm font-medium transition hover:bg-surface-muted"
-              >
-                Clear
-              </button>
-            )}
             <p className="w-full text-xs text-muted-foreground">
               {isScheduled
                 ? `Scheduled for ${formatDate(scheduledAt!)}. The client sees this time and can confirm attendance.`
@@ -124,7 +120,6 @@ export function MeetingPanel({
       </section>
 
       <div className="grid gap-6 md:grid-cols-2">
-        {/* Session details */}
         <section className="rounded-lg border bg-surface p-5">
           <h3 className="font-display text-base font-semibold">
             Session Details
@@ -153,7 +148,6 @@ export function MeetingPanel({
           </ul>
         </section>
 
-        {/* Agenda */}
         <section className="rounded-lg border bg-surface p-5">
           <h3 className="font-display text-base font-semibold">Agenda</h3>
           <ol className="mt-3 list-decimal space-y-1 pl-5 text-sm text-muted-foreground">
@@ -164,7 +158,6 @@ export function MeetingPanel({
         </section>
       </div>
 
-      {/* Optional read-only pre-read */}
       {preRead && (
         <section className="rounded-lg border bg-surface-muted p-5">
           <h3 className="font-display text-base font-semibold">
@@ -181,17 +174,17 @@ export function MeetingPanel({
         </section>
       )}
 
-      {/* Action area - differs by role */}
       <section className="flex flex-wrap items-center gap-3 rounded-lg border border-dashed bg-surface p-5">
         {role === "client" ? (
           <button
-            onClick={() =>
-              setState((p) => ({
-                ...p,
-                attendanceConfirmed: !p.attendanceConfirmed,
-              }))
-            }
-            disabled={stageStatus === "completed" || !isScheduled}
+            onClick={() => {
+              const next = !attendanceConfirmed;
+              setAttendanceConfirmed(next);
+              run(() =>
+                confirmAttendance(meetingId, next, engagementId, stage),
+              );
+            }}
+            disabled={stageStatus === "completed" || !isScheduled || pending}
             className="rounded-md bg-navy px-4 py-2 text-sm font-medium text-white transition hover:bg-navy-700 disabled:opacity-50"
           >
             {attendanceConfirmed
@@ -199,25 +192,27 @@ export function MeetingPanel({
               : "Confirm Attendance"}
           </button>
         ) : (
-          <>
-            <button
-              onClick={() => setState((p) => ({ ...p, signOffUploaded: true }))}
-              className="inline-flex items-center gap-2 rounded-md border border-navy/20 px-4 py-2 text-sm font-medium text-navy transition hover:bg-navy hover:text-white"
-            >
-              <FileSignature className="h-4 w-4" />
-              {signOffUploaded ? "Sign-Off Uploaded ✓" : "Upload Sign-Off"}
-            </button>
-            <button className="rounded-md bg-accent px-4 py-2 text-sm font-medium text-navy transition hover:bg-accent-soft">
-              Mark Stage Complete
-            </button>
-          </>
+          <button
+            onClick={() => {
+              setSignOffUploaded(true);
+              run(() => setSignOff(meetingId, true, engagementId, stage));
+            }}
+            disabled={pending}
+            className="inline-flex items-center gap-2 rounded-md border border-navy/20 px-4 py-2 text-sm font-medium text-navy transition hover:bg-navy hover:text-white disabled:opacity-50"
+          >
+            <FileSignature className="h-4 w-4" />
+            {signOffUploaded ? "Sign-Off Recorded ✓" : "Record Sign-Off"}
+          </button>
+        )}
+        {error && (
+          <p className="w-full text-xs text-status-locked">{error}</p>
         )}
         <p className="w-full text-xs text-muted-foreground">
           {role === "client"
             ? isScheduled
               ? "Confirming attendance does not advance the engagement. The session is conducted in person."
               : "Attendance can be confirmed once the advisor schedules the session."
-            : "Marking complete is advisor-controlled and triggers the next stage / unlocks the relevant release gate."}
+            : "Stage completion is set from the Advisor Control Panel."}
         </p>
       </section>
     </div>

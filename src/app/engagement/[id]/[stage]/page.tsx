@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { Lock, EyeOff } from "lucide-react";
-import { getEngagementById } from "@/lib/data";
+import { getEngagementById, getQuestionnaireState } from "@/lib/data";
 import { requireUser } from "@/lib/auth";
 import { getStageDefinition, PILLAR_LABELS } from "@/lib/pillars";
 import {
@@ -44,6 +44,10 @@ export default async function StagePage({
 
   const state = getStageState(engagement, stage);
   const eyebrow = PILLAR_LABELS[engagement.pillar];
+  const qState =
+    stage === "intake" || stage === "questionnaire"
+      ? await getQuestionnaireState(engagement.id, stage)
+      : { answers: {}, submittedAt: null };
 
   // ── Server-side access enforcement ──────────────────────────────────────
   // A client must never reach internal or status-only content, even by URL.
@@ -119,7 +123,10 @@ export default async function StagePage({
           />
           <QuestionnaireForm
             role={role}
-            storageKey={`${engagement.id}:${stage}`}
+            engagementId={engagement.id}
+            stage={stage}
+            initialAnswers={qState.answers}
+            initialSubmittedAt={qState.submittedAt}
             submitAllLabel="Submit Intake"
             sections={sectionsForRole(
               [...PILLAR_1_INTAKE, ...getSectorSections(engagement.sector)],
@@ -139,7 +146,10 @@ export default async function StagePage({
           />
           <QuestionnaireForm
             role={role}
-            storageKey={`${engagement.id}:${stage}`}
+            engagementId={engagement.id}
+            stage={stage}
+            initialAnswers={qState.answers}
+            initialSubmittedAt={qState.submittedAt}
             submitAllLabel="Submit Diagnostic"
             sections={sectionsForRole(
               [...PILLAR_2_CORE, ...getP2SectorSections(engagement.sector)],
@@ -160,7 +170,8 @@ export default async function StagePage({
           <MeetingPanel
             meeting={meeting}
             role={role}
-            storageKey={`${engagement.id}:${stage}`}
+            engagementId={engagement.id}
+            stage={stage}
             stageStatus={meetingStatus}
             preRead={
               def.visibility === "pre_read"
