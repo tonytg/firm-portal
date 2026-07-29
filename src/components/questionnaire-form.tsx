@@ -10,6 +10,10 @@ import {
   submitQuestionnaire,
   reopenSubmission,
 } from "@/app/engagement/actions";
+import {
+  uploadEvidence,
+  getEvidenceUrl,
+} from "@/app/engagement/storage-actions";
 
 /**
  * Shared questionnaire renderer for Pillar 1 Intake and Pillar 2 Diagnostic.
@@ -27,6 +31,7 @@ export function QuestionnaireForm({
   stage,
   initialAnswers,
   initialSubmittedAt,
+  initialEvidence,
 }: {
   sections: QuestionnaireSection[];
   role: Role;
@@ -35,6 +40,7 @@ export function QuestionnaireForm({
   stage: string;
   initialAnswers: Record<string, string>;
   initialSubmittedAt: string | null;
+  initialEvidence: Record<string, { id: string; filename: string }[]>;
 }) {
   const [answers, setAnswers] = useState<Record<string, string>>(initialAnswers);
   const [statuses, setStatuses] = useState<Record<string, SectionStatus>>(
@@ -77,6 +83,12 @@ export function QuestionnaireForm({
       await reopenSubmission(engagementId, stage);
       setSubmittedAt(null);
     });
+
+  const openEvidence = (fileId: string) => {
+    getEvidenceUrl(fileId)
+      .then((url) => window.open(url, "_blank"))
+      .catch(() => setError("Could not open the file."));
+  };
 
   return (
     <div className="space-y-5">
@@ -182,14 +194,41 @@ export function QuestionnaireForm({
                     className="mt-2 w-full rounded-md border bg-background px-3 py-2 text-sm outline-none focus:border-accent disabled:opacity-60"
                   />
                   {q.evidenceRequired && (
-                    <button
-                      type="button"
-                      disabled={locked}
-                      className="mt-2 inline-flex items-center gap-1.5 rounded-md border border-dashed px-3 py-1.5 text-xs text-muted-foreground transition hover:border-accent hover:text-accent disabled:opacity-50"
-                    >
-                      <Upload className="h-3.5 w-3.5" />
-                      Upload evidence
-                    </button>
+                    <div className="mt-2 space-y-1.5">
+                      {(initialEvidence[q.id] ?? []).map((f) => (
+                        <button
+                          key={f.id}
+                          type="button"
+                          onClick={() => openEvidence(f.id)}
+                          className="mr-2 inline-flex items-center gap-1.5 rounded-md bg-surface-muted px-2 py-1 text-xs text-navy transition hover:underline"
+                        >
+                          <Upload className="h-3 w-3" /> {f.filename}
+                        </button>
+                      ))}
+                      {!locked && (
+                        <form
+                          action={uploadEvidence}
+                          className="flex flex-wrap items-center gap-2"
+                        >
+                          <input type="hidden" name="engagementId" value={engagementId} />
+                          <input type="hidden" name="stage" value={stage} />
+                          <input type="hidden" name="questionId" value={q.id} />
+                          <input
+                            type="file"
+                            name="file"
+                            required
+                            className="text-xs file:mr-2 file:rounded file:border-0 file:bg-navy file:px-2 file:py-1 file:text-white"
+                          />
+                          <button
+                            type="submit"
+                            className="inline-flex items-center gap-1.5 rounded-md border border-dashed px-3 py-1.5 text-xs text-muted-foreground transition hover:border-accent hover:text-accent"
+                          >
+                            <Upload className="h-3.5 w-3.5" />
+                            Upload evidence
+                          </button>
+                        </form>
+                      )}
+                    </div>
                   )}
                 </div>
               ))}

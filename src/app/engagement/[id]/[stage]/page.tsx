@@ -47,7 +47,7 @@ export default async function StagePage({
   const qState =
     stage === "intake" || stage === "questionnaire"
       ? await getQuestionnaireState(engagement.id, stage)
-      : { answers: {}, submittedAt: null };
+      : { answers: {}, submittedAt: null, evidence: {} };
 
   // ── Server-side access enforcement ──────────────────────────────────────
   // A client must never reach internal or status-only content, even by URL.
@@ -127,6 +127,7 @@ export default async function StagePage({
             stage={stage}
             initialAnswers={qState.answers}
             initialSubmittedAt={qState.submittedAt}
+            initialEvidence={qState.evidence}
             submitAllLabel="Submit Intake"
             sections={sectionsForRole(
               [...PILLAR_1_INTAKE, ...getSectorSections(engagement.sector)],
@@ -150,6 +151,7 @@ export default async function StagePage({
             stage={stage}
             initialAnswers={qState.answers}
             initialSubmittedAt={qState.submittedAt}
+            initialEvidence={qState.evidence}
             submitAllLabel="Submit Diagnostic"
             sections={sectionsForRole(
               [...PILLAR_2_CORE, ...getP2SectorSections(engagement.sector)],

@@ -145,15 +145,16 @@ export async function getEngagementById(
 export interface QuestionnaireState {
   answers: Record<string, string>;
   submittedAt: string | null;
+  evidence: Record<string, { id: string; filename: string }[]>;
 }
 
-/** Saved responses + submission for one engagement stage (RLS-scoped). */
+/** Saved responses + submission + evidence for one engagement stage (RLS-scoped). */
 export async function getQuestionnaireState(
   engagementId: string,
   stage: string,
 ): Promise<QuestionnaireState> {
   const supabase = await createServerSupabase();
-  const [responsesRes, submissionRes] = await Promise.all([
+  const [responsesRes, submissionRes, evidenceRes] = await Promise.all([
     supabase
       .from("questionnaire_responses")
       .select("question_id, answer")
@@ -165,10 +166,23 @@ export async function getQuestionnaireState(
       .eq("engagement_id", engagementId)
       .eq("stage", stage)
       .maybeSingle(),
+    supabase
+      .from("evidence_files")
+      .select("id, question_id, filename")
+      .eq("engagement_id", engagementId)
+      .eq("stage", stage),
   ]);
   const answers: Record<string, string> = {};
   for (const r of responsesRes.data ?? []) {
     if (r.answer != null) answers[r.question_id] = r.answer;
   }
-  return { answers, submittedAt: submissionRes.data?.submitted_at ?? null };
+  const evidence: Record<string, { id: string; filename: string }[]> = {};
+  for (const e of evidenceRes.data ?? []) {
+    (evidence[e.question_id] ??= []).push({ id: e.id, filename: e.filename });
+  }
+  return {
+    answers,
+    submittedAt: submissionRes.data?.submitted_at ?? null,
+    evidence,
+  };
 }

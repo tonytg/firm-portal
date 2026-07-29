@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Download, Lock, FileText, CheckCircle2 } from "lucide-react";
+import { Download, Lock, FileText, CheckCircle2, Upload } from "lucide-react";
 import type { Engagement, Role, Deliverable } from "@/lib/types";
 import {
   canReleaseDeliverable,
@@ -9,13 +9,14 @@ import {
   isFinalPaymentDue,
 } from "@/lib/engagement";
 import { setDeliverableReleased } from "@/app/engagement/actions";
+import { uploadDeliverable, getDeliverableUrl } from "@/app/engagement/storage-actions";
 
 /**
- * Controlled Release / Output screen. Locked rules:
- *  - Executive Brief releases first; final PDFs unlock after the
- *    walkthrough/validation gate AND final payment; PDF only.
- *  - Release eligibility is computed from engagement state; the advisor toggles
- *    the released flag, which persists to the database.
+ * Controlled Release / Output screen. The advisor uploads the PDF and toggles
+ * release (gated); the client downloads via a short-lived signed URL only once
+ * the deliverable is released and its gate (walkthrough + final payment) is met.
+ * File presence is read from props so it reflects uploads after revalidation;
+ * the release flag is optimistic.
  */
 const GATE_LABEL: Record<Deliverable["releaseGate"], string> = {
   executive_first: "Released first (via portal)",
@@ -30,19 +31,32 @@ export function DeliverablesPanel({
   engagement: Engagement;
   role: Role;
 }) {
-  const [deliverables, setDeliverables] = useState(engagement.deliverables);
+  const [releasedMap, setReleasedMap] = useState<Record<string, boolean>>(() =>
+    Object.fromEntries(engagement.deliverables.map((d) => [d.id, d.released])),
+  );
+  const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
-  const eng: Engagement = { ...engagement, deliverables };
+
+  const eng: Engagement = {
+    ...engagement,
+    deliverables: engagement.deliverables.map((d) => ({
+      ...d,
+      released: releasedMap[d.id] ?? d.released,
+    })),
+  };
   const finalPaymentDue = isFinalPaymentDue(eng);
 
   function toggleRelease(id: string, current: boolean) {
     const next = !current;
-    setDeliverables((list) =>
-      list.map((d) => (d.id === id ? { ...d, released: next } : d)),
-    );
-    startTransition(() =>
-      void setDeliverableReleased(id, next, engagement.id),
-    );
+    setReleasedMap((m) => ({ ...m, [id]: next }));
+    startTransition(() => void setDeliverableReleased(id, next, engagement.id));
+  }
+
+  function download(id: string) {
+    setError(null);
+    getDeliverableUrl(id, engagement.id)
+      .then((url) => window.open(url, "_blank"))
+      .catch((e) => setError(e instanceof Error ? e.message : "Download failed."));
   }
 
   return (
@@ -64,10 +78,19 @@ export function DeliverablesPanel({
         </div>
       )}
 
+      {error && (
+        <p className="rounded-md bg-status-locked/10 px-3 py-2 text-sm text-status-locked">
+          {error}
+        </p>
+      )}
+
       <ul className="space-y-3">
-        {deliverables.map((d) => {
-          const gateOpen = canReleaseDeliverable(eng, d);
-          const downloadable = isDeliverableDownloadable(eng, d);
+        {engagement.deliverables.map((d) => {
+          const released = releasedMap[d.id] ?? d.released;
+          const merged = { ...d, released };
+          const gateOpen = canReleaseDeliverable(eng, merged);
+          const downloadable = isDeliverableDownloadable(eng, merged);
+          const hasFile = Boolean(d.fileUrl);
 
           return (
             <li
@@ -80,34 +103,49 @@ export function DeliverablesPanel({
                   <p className="font-medium">{d.title}</p>
                   <p className="text-xs text-muted-foreground">
                     {d.format} · {GATE_LABEL[d.releaseGate]}
+                    {role === "advisor" && (hasFile ? " · PDF attached" : " · no PDF")}
                   </p>
                 </div>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 {role === "advisor" && (
-                  <button
-                    disabled={!gateOpen || pending}
-                    onClick={() => toggleRelease(d.id, d.released)}
-                    title={
-                      gateOpen
-                        ? "Release this deliverable to the client"
-                        : "Gate not satisfied yet (complete the required meeting / final payment first)"
-                    }
-                    className="rounded-md border border-navy/20 px-3 py-1.5 text-sm font-medium text-navy transition hover:bg-navy hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
-                  >
-                    {d.released ? "Released ✓" : "Release"}
-                  </button>
+                  <>
+                    <form action={uploadDeliverable} className="flex items-center gap-1">
+                      <input type="hidden" name="deliverableId" value={d.id} />
+                      <input type="hidden" name="engagementId" value={engagement.id} />
+                      <input
+                        type="file"
+                        name="file"
+                        accept="application/pdf"
+                        required
+                        className="w-40 text-xs file:mr-1 file:rounded file:border-0 file:bg-surface-muted file:px-2 file:py-1"
+                      />
+                      <button
+                        type="submit"
+                        className="inline-flex items-center gap-1 rounded-md border px-2 py-1.5 text-xs font-medium transition hover:bg-surface-muted"
+                      >
+                        <Upload className="h-3.5 w-3.5" /> PDF
+                      </button>
+                    </form>
+                    <button
+                      disabled={!gateOpen || pending}
+                      onClick={() => toggleRelease(d.id, released)}
+                      className="rounded-md border border-navy/20 px-3 py-1.5 text-sm font-medium text-navy transition hover:bg-navy hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                      {released ? "Released ✓" : "Release"}
+                    </button>
+                  </>
                 )}
 
                 {downloadable ? (
-                  <a
-                    href={d.fileUrl ?? "#"}
+                  <button
+                    onClick={() => download(d.id)}
                     className="inline-flex items-center gap-1.5 rounded-md bg-accent px-3 py-1.5 text-sm font-medium text-navy transition hover:bg-accent-soft"
                   >
                     <Download className="h-4 w-4" />
                     Download
-                  </a>
+                  </button>
                 ) : (
                   <span className="inline-flex items-center gap-1.5 rounded-md bg-surface-muted px-3 py-1.5 text-sm text-muted-foreground">
                     <Lock className="h-4 w-4" />
@@ -122,8 +160,8 @@ export function DeliverablesPanel({
 
       <p className="flex items-center gap-2 text-xs text-muted-foreground">
         <CheckCircle2 className="h-4 w-4 text-status-completed" />
-        Download links are gated server-side - a locked deliverable cannot be
-        reached even with a direct URL.
+        Downloads are gated server-side and served via short-lived signed links -
+        a locked deliverable cannot be reached even with a direct URL.
       </p>
     </div>
   );
