@@ -1,4 +1,5 @@
 import { signIn } from "@/app/auth/actions";
+import { SubmitButton } from "./submit-button";
 
 export const metadata = { title: "Sign in - IMPACT Portal" };
 
@@ -46,12 +47,7 @@ export default async function LoginPage({
               {error}
             </p>
           )}
-          <button
-            type="submit"
-            className="w-full rounded-md bg-navy px-4 py-2 text-sm font-medium text-white transition hover:bg-navy-700"
-          >
-            Sign in
-          </button>
+          <SubmitButton />
         </form>
         <p className="mt-6 text-center text-[11px] text-muted-foreground">
           Accounts are created by your advisor. Contact IMPACT if you need access.

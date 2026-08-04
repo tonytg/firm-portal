@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import { createServerSupabase } from "@/lib/supabase/server";
 
 export async function signIn(formData: FormData) {
@@ -12,6 +13,8 @@ export async function signIn(formData: FormData) {
   if (error) {
     redirect("/login?error=" + encodeURIComponent("Invalid email or password."));
   }
+  // Clear the router cache so the new session is reflected without a manual refresh.
+  revalidatePath("/", "layout");
   redirect("/dashboard");
 }
 
